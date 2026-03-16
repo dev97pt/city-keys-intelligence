@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          booking_status: string
+          created_at: string
+          experience_id: string
+          id: string
+          payment_status: string
+          stripe_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          booking_status?: string
+          created_at?: string
+          experience_id: string
+          id?: string
+          payment_status?: string
+          stripe_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          booking_status?: string
+          created_at?: string
+          experience_id?: string
+          id?: string
+          payment_status?: string
+          stripe_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_experience_id_fkey"
+            columns: ["experience_id"]
+            isOneToOne: false
+            referencedRelation: "experiences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cities: {
         Row: {
           country_id: string
@@ -97,6 +135,65 @@ export type Database = {
           },
         ]
       }
+      comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultations: {
+        Row: {
+          booking_date: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          booking_date?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          booking_date?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       countries: {
         Row: {
           created_at: string
@@ -123,6 +220,145 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      deal_calculators: {
+        Row: {
+          cash_flow: number | null
+          city_id: string | null
+          created_at: string
+          id: string
+          monthly_rent: number
+          notes: string | null
+          purchase_price: number
+          renovation_cost: number
+          roi: number | null
+          updated_at: string
+          user_id: string
+          yield: number | null
+        }
+        Insert: {
+          cash_flow?: number | null
+          city_id?: string | null
+          created_at?: string
+          id?: string
+          monthly_rent?: number
+          notes?: string | null
+          purchase_price?: number
+          renovation_cost?: number
+          roi?: number | null
+          updated_at?: string
+          user_id: string
+          yield?: number | null
+        }
+        Update: {
+          cash_flow?: number | null
+          city_id?: string | null
+          created_at?: string
+          id?: string
+          monthly_rent?: number
+          notes?: string | null
+          purchase_price?: number
+          renovation_cost?: number
+          roi?: number | null
+          updated_at?: string
+          user_id?: string
+          yield?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_calculators_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      experiences: {
+        Row: {
+          capacity: number
+          city_id: string | null
+          country_id: string
+          created_at: string
+          date_end: string | null
+          date_start: string | null
+          description: string | null
+          id: string
+          price: number
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number
+          city_id?: string | null
+          country_id: string
+          created_at?: string
+          date_end?: string | null
+          date_start?: string | null
+          description?: string | null
+          id?: string
+          price?: number
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          city_id?: string | null
+          country_id?: string
+          created_at?: string
+          date_end?: string | null
+          date_start?: string | null
+          description?: string | null
+          id?: string
+          price?: number
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experiences_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "experiences_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      likes: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       neighborhood_stats: {
         Row: {
@@ -173,6 +409,111 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partners: {
+        Row: {
+          category: string
+          city_id: string | null
+          contact_email: string | null
+          country_id: string
+          created_at: string
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          website: string | null
+        }
+        Insert: {
+          category: string
+          city_id?: string | null
+          contact_email?: string | null
+          country_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          website?: string | null
+        }
+        Update: {
+          category?: string
+          city_id?: string | null
+          contact_email?: string | null
+          country_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partners_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partners_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          category: string
+          city_id: string | null
+          content: string
+          country_id: string | null
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          city_id?: string | null
+          content: string
+          country_id?: string | null
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          city_id?: string | null
+          content?: string
+          country_id?: string | null
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
             referencedColumns: ["id"]
           },
         ]
@@ -234,6 +575,33 @@ export type Database = {
           },
         ]
       }
+      resources: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          file_url: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -251,6 +619,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      webinars: {
+        Row: {
+          country_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          thumbnail: string | null
+          title: string
+          video_url: string | null
+        }
+        Insert: {
+          country_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          thumbnail?: string | null
+          title: string
+          video_url?: string | null
+        }
+        Update: {
+          country_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          thumbnail?: string | null
+          title?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webinars_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
