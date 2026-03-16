@@ -74,10 +74,10 @@ export function HowItWorksSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className={`relative flex flex-col rounded-lg border p-8 ${
+              className={`relative flex flex-col rounded-lg border p-8 transition-all duration-300 ${
                 p.popular
-                  ? "border-primary/40 bg-primary/5"
-                  : "border-border/50 bg-card/50"
+                  ? "border-primary/40 bg-primary/5 hover:border-primary/70 hover:bg-primary/10 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.2)]"
+                  : "border-border/50 bg-card/50 hover:border-primary/30 hover:bg-card/80 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.1)]"
               }`}
             >
               {p.popular && (
