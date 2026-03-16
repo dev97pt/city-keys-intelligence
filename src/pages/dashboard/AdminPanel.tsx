@@ -34,14 +34,14 @@ function AdminCRUD({
   fields: { key: string; label: string; type?: string; options?: { value: string; label: string }[] }[];
 }) {
   const { toast } = useToast();
-  const [items, setItems] = useState<T[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
 
   const fetchItems = async () => {
-    const { data } = await (supabase.from(table) as any).select("*").order("created_at", { ascending: false });
-    setItems((data as T[]) || []);
+    const { data } = await (supabase as any).from(table).select("*").order("created_at", { ascending: false });
+    setItems(data || []);
     setLoading(false);
   };
 
