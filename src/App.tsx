@@ -14,6 +14,11 @@ import DashboardLayout from "./components/dashboard/DashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
 import CityPapers from "./pages/dashboard/CityPapers";
 import NeighborhoodIntel from "./pages/dashboard/NeighborhoodIntel";
+import Experiences from "./pages/dashboard/Experiences";
+import Community from "./pages/dashboard/Community";
+import DealCalculators from "./pages/dashboard/DealCalculators";
+import AIAssistant from "./pages/dashboard/AIAssistant";
+import AdminPanel from "./pages/dashboard/AdminPanel";
 import ComingSoon from "./pages/dashboard/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -43,12 +48,14 @@ const App = () => (
               <Route index element={<Dashboard />} />
               <Route path="city-papers" element={<CityPapers />} />
               <Route path="neighborhood-intel" element={<NeighborhoodIntel />} />
+              <Route path="experiences" element={<Experiences />} />
+              <Route path="community" element={<Community />} />
+              <Route path="calculators" element={<DealCalculators />} />
+              <Route path="ai-assistant" element={<AIAssistant />} />
+              <Route path="admin" element={<AdminPanel />} />
               <Route path="webinars" element={<ComingSoon />} />
               <Route path="partners" element={<ComingSoon />} />
-              <Route path="community" element={<ComingSoon />} />
-              <Route path="calculators" element={<ComingSoon />} />
               <Route path="templates" element={<ComingSoon />} />
-              <Route path="experiences" element={<ComingSoon />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
