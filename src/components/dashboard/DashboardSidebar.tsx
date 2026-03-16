@@ -9,9 +9,13 @@ import {
   MapPin,
   Compass,
   LogOut,
+  Bot,
+  Shield,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/components/AuthProvider";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
   SidebarContent,
@@ -30,21 +34,30 @@ const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "City Papers", url: "/dashboard/city-papers", icon: FileText },
   { title: "Neighborhood Intel", url: "/dashboard/neighborhood-intel", icon: MapPin },
+  { title: "Experiences", url: "/dashboard/experiences", icon: Compass },
+  { title: "Community", url: "/dashboard/community", icon: Users },
+  { title: "Deal Calculators", url: "/dashboard/calculators", icon: Calculator },
+  { title: "AI Assistant", url: "/dashboard/ai-assistant", icon: Bot },
 ];
 
 const comingSoonItems = [
   { title: "Webinars", url: "/dashboard/webinars", icon: Video },
   { title: "Partner Directory", url: "/dashboard/partners", icon: BookOpen },
-  { title: "Community", url: "/dashboard/community", icon: Users },
-  { title: "Deal Calculators", url: "/dashboard/calculators", icon: Calculator },
   { title: "Templates", url: "/dashboard/templates", icon: CheckSquare },
-  { title: "Experiences", url: "/dashboard/experiences", icon: Compass },
 ];
 
 export function DashboardSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").then(({ data }) => {
+      setIsAdmin(data && data.length > 0);
+    });
+  }, [user]);
 
   return (
     <Sidebar collapsible="icon">
@@ -101,6 +114,28 @@ export function DashboardSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>{!collapsed && "Admin"}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to="/dashboard/admin"
+                      className="hover:bg-sidebar-accent"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <Shield className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>Admin Panel</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-4">
