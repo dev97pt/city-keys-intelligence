@@ -31,6 +31,12 @@ export function Navbar() {
               {l.label}
             </a>
           ))}
+          <Link
+            to="/explore"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Explore
+          </Link>
           <Link to="/login">
             <Button variant="outline" size="sm" className="border-border text-foreground">
               Log In
@@ -62,6 +68,13 @@ export function Navbar() {
               {l.label}
             </a>
           ))}
+          <Link
+            to="/explore"
+            className="block py-3 text-sm text-muted-foreground"
+            onClick={() => setOpen(false)}
+          >
+            Explore
+          </Link>
           <div className="mt-4 flex flex-col gap-3">
             <Link to="/login">
               <Button variant="outline" className="w-full border-border">Log In</Button>
