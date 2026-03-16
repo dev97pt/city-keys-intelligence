@@ -13,8 +13,8 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.2, 0, 0, 1] }}
-          className="font-serif text-5xl font-semibold leading-tight tracking-tight text-foreground sm:text-6xl md:text-7xl lg:text-8xl"
-        >
+          className="font-serif text-5xl font-semibold leading-tight tracking-tight text-foreground sm:text-6xl md:text-7xl lg:text-8xl">
+          
           From Arrival<br />to Ownership
         </motion.h1>
 
@@ -22,8 +22,8 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.15, ease: [0.2, 0, 0, 1] }}
-          className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl"
-        >
+          className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
+          
           The insider platform for internationals building life abroad.
         </motion.p>
 
@@ -32,8 +32,8 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3, ease: [0.2, 0, 0, 1] }}
-          className="mx-auto mt-10 max-w-xl rounded-lg border border-border/50 bg-card/60 p-6 backdrop-blur-sm"
-        >
+          className="mx-auto mt-10 max-w-xl rounded-lg border border-border/50 bg-card/60 p-6 backdrop-blur-sm">
+          
           <p className="text-sm italic text-muted-foreground leading-relaxed">
             "I'd rather crush your dreams now than watch you lose €100k later.
             This platform gives you the truth, the tools, and the team to build right."
@@ -48,8 +48,8 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.45, ease: [0.2, 0, 0, 1] }}
-          className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
-        >
+          className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+          
           <Link to="/signup">
             <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 text-base">
               Get Started
@@ -63,24 +63,24 @@ export function HeroSection() {
         </motion.div>
 
         {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mx-auto mt-16 flex max-w-md justify-center gap-12"
-        >
-          {[
-            { value: "200+", label: "Members" },
-            { value: "50+", label: "Vetted Partners" },
-            { value: "3", label: "Cities" },
-          ].map((s) => (
-            <div key={s.label} className="text-center">
-              <p className="font-mono text-2xl font-semibold text-primary">{s.value}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{s.label}</p>
-            </div>
-          ))}
-        </motion.div>
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
       </div>
-    </section>
-  );
+    </section>);
+
 }
