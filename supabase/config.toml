@@ -1,1 +1,10 @@
 project_id = "xxfkhvmhzlayxzoxbors"
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.ai-chat]
+verify_jwt = false
