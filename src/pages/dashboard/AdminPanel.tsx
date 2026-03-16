@@ -24,7 +24,7 @@ function useIsAdmin() {
 }
 
 // Generic CRUD component
-function AdminCRUD<T extends { id: string }>({
+function AdminCRUD({
   table,
   columns,
   fields,
