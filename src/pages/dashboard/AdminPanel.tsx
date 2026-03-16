@@ -48,7 +48,7 @@ function AdminCRUD({
   useEffect(() => { fetchItems(); }, []);
 
   const handleCreate = async () => {
-    const { error } = await (supabase.from(table) as any).insert(formData);
+    const { error } = await (supabase as any).from(table).insert(formData);
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });
     } else {
