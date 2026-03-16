@@ -31,6 +31,12 @@ export function Navbar() {
               {l.label}
             </a>
           ))}
+          <Link
+            to="/explore"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Explore
+          </Link>
           <Link to="/login">
             <Button variant="outline" size="sm" className="border-border text-foreground">
               Log In
