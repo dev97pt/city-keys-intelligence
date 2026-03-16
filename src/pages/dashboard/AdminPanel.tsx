@@ -40,7 +40,7 @@ function AdminCRUD<T extends { id: string }>({
   const [formData, setFormData] = useState<Record<string, string>>({});
 
   const fetchItems = async () => {
-    const { data } = await supabase.from(table).select("*").order("created_at", { ascending: false });
+    const { data } = await (supabase.from(table) as any).select("*").order("created_at", { ascending: false });
     setItems((data as T[]) || []);
     setLoading(false);
   };
@@ -48,7 +48,7 @@ function AdminCRUD<T extends { id: string }>({
   useEffect(() => { fetchItems(); }, []);
 
   const handleCreate = async () => {
-    const { error } = await supabase.from(table).insert(formData as any);
+    const { error } = await (supabase.from(table) as any).insert(formData);
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });
     } else {
@@ -60,7 +60,7 @@ function AdminCRUD<T extends { id: string }>({
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from(table).delete().eq("id", id);
+    const { error } = await (supabase.from(table) as any).delete().eq("id", id);
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });
     } else {
