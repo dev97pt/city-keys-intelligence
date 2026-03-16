@@ -20,6 +20,9 @@ import DealCalculators from "./pages/dashboard/DealCalculators";
 import AIAssistant from "./pages/dashboard/AIAssistant";
 import AdminPanel from "./pages/dashboard/AdminPanel";
 import ComingSoon from "./pages/dashboard/ComingSoon";
+import ExplorePage from "./pages/ExplorePage";
+import CountryPage from "./pages/CountryPage";
+import CityPage from "./pages/CityPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +40,9 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/explore/:slug" element={<CountryPage />} />
+            <Route path="/explore/:countrySlug/:citySlug" element={<CityPage />} />
             <Route
               path="/dashboard"
               element={
