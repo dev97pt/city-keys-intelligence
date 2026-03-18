@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
 import { FileText, Video, Users, Calculator, CheckSquare, MapPin, Percent, BookOpen } from "lucide-react";
+import { TextReveal, FadeUp } from "./ScrollReveal";
 
 const features = [
   { icon: FileText, title: "City Papers", desc: "Step-by-step guides for Lisbon, Porto, and Algarve. First 90 days, neighborhood deep-dives, integration essentials." },
@@ -16,34 +16,29 @@ export function PlatformSection() {
   return (
     <section id="platform" className="px-6 py-24">
       <div className="mx-auto max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center"
-        >
-          <h2 className="font-serif text-4xl font-semibold text-foreground sm:text-5xl">
+        <div className="text-center">
+          <TextReveal
+            as="h2"
+            className="font-serif text-4xl font-semibold text-foreground sm:text-5xl"
+          >
             Inside the Platform
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            Everything you need to go from arrival to ownership, all in one place.
-          </p>
-        </motion.div>
+          </TextReveal>
+          <FadeUp delay={0.15}>
+            <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+              Everything you need to go from arrival to ownership, all in one place.
+            </p>
+          </FadeUp>
+        </div>
 
         <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((f, i) => (
-            <motion.div
-              key={f.title}
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.05 }}
-              className="group rounded-lg border border-border/40 bg-card/30 p-6 transition-colors hover:border-primary/20 hover:bg-card/60"
-            >
-              <f.icon className="h-6 w-6 text-primary" />
-              <h3 className="mt-4 font-serif text-lg font-semibold text-foreground">{f.title}</h3>
-              <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
-            </motion.div>
+            <FadeUp key={f.title} delay={i * 0.06}>
+              <div className="group rounded-lg border border-border/40 bg-card/30 p-6 transition-colors hover:border-primary/20 hover:bg-card/60">
+                <f.icon className="h-6 w-6 text-primary" />
+                <h3 className="mt-4 font-serif text-lg font-semibold text-foreground">{f.title}</h3>
+                <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
+              </div>
+            </FadeUp>
           ))}
         </div>
       </div>
