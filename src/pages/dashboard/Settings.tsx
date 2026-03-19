@@ -90,10 +90,22 @@ export default function Settings() {
 
   const handleDeleteAccount = async () => {
     if (deleteConfirm !== "DELETE") return;
-    // Sign out the user - actual account deletion would need an edge function with service role
-    toast({ title: "Account deletion requested", description: "Your account will be deleted. You will be signed out." });
-    setDeleteDialogOpen(false);
-    await signOut();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const res = await supabase.functions.invoke("delete-account", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (res.error) throw res.error;
+
+      toast({ title: "Account deleted", description: "Your account has been permanently deleted." });
+      setDeleteDialogOpen(false);
+      await signOut();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message || "Failed to delete account." });
+    }
   };
 
   return (
