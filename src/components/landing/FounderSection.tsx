@@ -36,7 +36,7 @@ export function FounderSection() {
             </FadeUp>
             <div className="mt-8 border-t border-border/50 pt-6">
               <p className="text-sm font-medium text-primary">Ismael Gomes Queta </p>
-              <p className="text-xs text-muted-foreground">Founder, Keys to the City</p>
+              <p className="text-xs text-muted-foreground">Founder </p>
             </div>
           </div>
         </FadeUp>
