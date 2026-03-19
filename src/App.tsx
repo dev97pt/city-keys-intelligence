@@ -63,6 +63,7 @@ const App = () => (
               <Route path="webinars" element={<ComingSoon />} />
               <Route path="partners" element={<ComingSoon />} />
               <Route path="templates" element={<ComingSoon />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

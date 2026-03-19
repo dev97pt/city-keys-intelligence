@@ -139,7 +139,21 @@ export function DashboardSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 space-y-1">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <NavLink
+                to="/dashboard/settings"
+                className="hover:bg-sidebar-accent"
+                activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                {!collapsed && <span>Settings</span>}
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
         <Button
           variant="ghost"
           size="sm"
