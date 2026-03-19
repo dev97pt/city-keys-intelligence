@@ -11,6 +11,7 @@ import {
   LogOut,
   Bot,
   Shield,
+  Settings,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/components/AuthProvider";
