@@ -20,6 +20,7 @@ import DealCalculators from "./pages/dashboard/DealCalculators";
 import AIAssistant from "./pages/dashboard/AIAssistant";
 import AdminPanel from "./pages/dashboard/AdminPanel";
 import ComingSoon from "./pages/dashboard/ComingSoon";
+import Settings from "./pages/dashboard/Settings";
 import ExplorePage from "./pages/ExplorePage";
 import CountryPage from "./pages/CountryPage";
 import CityPage from "./pages/CityPage";
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="webinars" element={<ComingSoon />} />
               <Route path="partners" element={<ComingSoon />} />
               <Route path="templates" element={<ComingSoon />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
