@@ -8,8 +8,8 @@ export function FounderSection() {
           <div className="rounded-lg border border-border/50 bg-card/50 p-10 md:p-14">
             <TextReveal
               as="h2"
-              className="font-serif text-3xl font-semibold text-foreground sm:text-4xl"
-            >
+              className="font-serif text-3xl font-semibold text-foreground sm:text-4xl">
+              
               Built by Someone Who's Been There
             </TextReveal>
 
@@ -35,12 +35,12 @@ export function FounderSection() {
               </div>
             </FadeUp>
             <div className="mt-8 border-t border-border/50 pt-6">
-              <p className="text-sm font-medium text-primary">Ismael Fernandes</p>
+              <p className="text-sm font-medium text-primary">Ismael Gomes Queta </p>
               <p className="text-xs text-muted-foreground">Founder, Keys to the City</p>
             </div>
           </div>
         </FadeUp>
       </div>
-    </section>
-  );
+    </section>);
+
 }
