@@ -43,6 +43,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/pending" element={<PendingApproval />} />
             <Route path="/explore/:slug" element={<CountryPage />} />
             <Route path="/explore/:countrySlug/:citySlug" element={<CityPage />} />
             <Route
