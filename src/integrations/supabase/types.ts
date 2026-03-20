@@ -550,6 +550,7 @@ export type Database = {
           main_goal: string | null
           onboarding_completed: boolean
           relocation_stage: string | null
+          status: string
           target_city_id: string | null
           target_country_id: string | null
           updated_at: string
@@ -564,6 +565,7 @@ export type Database = {
           main_goal?: string | null
           onboarding_completed?: boolean
           relocation_stage?: string | null
+          status?: string
           target_city_id?: string | null
           target_country_id?: string | null
           updated_at?: string
@@ -578,6 +580,7 @@ export type Database = {
           main_goal?: string | null
           onboarding_completed?: boolean
           relocation_stage?: string | null
+          status?: string
           target_city_id?: string | null
           target_country_id?: string | null
           updated_at?: string

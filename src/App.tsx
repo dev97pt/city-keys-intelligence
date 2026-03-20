@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
+import PendingApproval from "./pages/PendingApproval";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/pending" element={<PendingApproval />} />
             <Route path="/explore/:slug" element={<CountryPage />} />
             <Route path="/explore/:countrySlug/:citySlug" element={<CityPage />} />
             <Route
