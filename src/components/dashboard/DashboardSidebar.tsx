@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Courses & Webinars", url: "/dashboard/courses", icon: Video },
   { title: "City Papers", url: "/dashboard/city-papers", icon: FileText },
   { title: "Neighborhood Intel", url: "/dashboard/neighborhood-intel", icon: MapPin },
   { title: "Experiences", url: "/dashboard/experiences", icon: Compass },
@@ -42,7 +43,6 @@ const mainItems = [
 ];
 
 const comingSoonItems = [
-  { title: "Webinars", url: "/dashboard/webinars", icon: Video },
   { title: "Partner Directory", url: "/dashboard/partners", icon: BookOpen },
   { title: "Templates", url: "/dashboard/templates", icon: CheckSquare },
 ];
