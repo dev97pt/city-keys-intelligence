@@ -22,6 +22,11 @@ import AIAssistant from "./pages/dashboard/AIAssistant";
 import AdminPanel from "./pages/dashboard/AdminPanel";
 import ComingSoon from "./pages/dashboard/ComingSoon";
 import Settings from "./pages/dashboard/Settings";
+import Courses from "./pages/dashboard/Courses";
+import CourseDetail from "./pages/dashboard/CourseDetail";
+import LessonViewer from "./pages/dashboard/LessonViewer";
+import LearningPathDetail from "./pages/dashboard/LearningPathDetail";
+import AdminCourses from "./pages/dashboard/AdminCourses";
 import ExplorePage from "./pages/ExplorePage";
 import CountryPage from "./pages/CountryPage";
 import CityPage from "./pages/CityPage";
@@ -62,7 +67,11 @@ const App = () => (
               <Route path="calculators" element={<DealCalculators />} />
               <Route path="ai-assistant" element={<AIAssistant />} />
               <Route path="admin" element={<AdminPanel />} />
-              <Route path="webinars" element={<ComingSoon />} />
+              <Route path="courses" element={<Courses />} />
+              <Route path="courses/:courseId" element={<CourseDetail />} />
+              <Route path="courses/:courseId/lesson/:lessonId" element={<LessonViewer />} />
+              <Route path="learning-paths/:pathId" element={<LearningPathDetail />} />
+              <Route path="admin-courses" element={<AdminCourses />} />
               <Route path="partners" element={<ComingSoon />} />
               <Route path="templates" element={<ComingSoon />} />
               <Route path="settings" element={<Settings />} />
