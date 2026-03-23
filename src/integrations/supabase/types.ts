@@ -93,9 +93,13 @@ export type Database = {
           content_markdown: string | null
           country_id: string
           created_at: string
+          created_by: string | null
+          description: string | null
           id: string
+          is_published: boolean
           pdf_url: string | null
           premium_only: boolean
+          thumbnail_url: string | null
           title: string
         }
         Insert: {
@@ -103,9 +107,13 @@ export type Database = {
           content_markdown?: string | null
           country_id: string
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           id?: string
+          is_published?: boolean
           pdf_url?: string | null
           premium_only?: boolean
+          thumbnail_url?: string | null
           title: string
         }
         Update: {
@@ -113,9 +121,13 @@ export type Database = {
           content_markdown?: string | null
           country_id?: string
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           id?: string
+          is_published?: boolean
           pdf_url?: string | null
           premium_only?: boolean
+          thumbnail_url?: string | null
           title?: string
         }
         Relationships: [

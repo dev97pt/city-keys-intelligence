@@ -1,36 +1,50 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText } from "lucide-react";
+import { FileText, MapPin } from "lucide-react";
 
 interface CityPaper {
   id: string;
   title: string;
+  description: string | null;
   content_markdown: string | null;
+  thumbnail_url: string | null;
   pdf_url: string | null;
   created_at: string;
-  cities: { name: string } | null;
-  countries: { name: string } | null;
+  country_id: string;
+  city_id: string | null;
 }
 
+interface LocationMap { [id: string]: string; }
+
 export default function CityPapers() {
+  const navigate = useNavigate();
   const [papers, setPapers] = useState<CityPaper[]>([]);
+  const [countries, setCountries] = useState<LocationMap>({});
+  const [cities, setCities] = useState<LocationMap>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("city_papers")
-      .select("id, title, content_markdown, pdf_url, created_at, cities(name), countries(name)")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setPapers((data as unknown as CityPaper[]) || []);
-        setLoading(false);
-      });
+    const load = async () => {
+      const [{ data: p }, { data: co }, { data: ci }] = await Promise.all([
+        supabase.from("city_papers").select("*").eq("is_published", true).order("created_at", { ascending: false }),
+        supabase.from("countries").select("id, name"),
+        supabase.from("cities").select("id, name"),
+      ]);
+      setPapers((p as unknown as CityPaper[]) || []);
+      const cm: LocationMap = {}; (co || []).forEach(c => cm[c.id] = c.name);
+      const cim: LocationMap = {}; (ci || []).forEach(c => cim[c.id] = c.name);
+      setCountries(cm);
+      setCities(cim);
+      setLoading(false);
+    };
+    load();
   }, []);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-5xl">
       <h1 className="font-serif text-3xl font-semibold text-foreground">City Papers</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Step-by-step guides for your target cities.</p>
+      <p className="mt-2 text-sm text-muted-foreground">In-depth guides for your target cities and countries.</p>
 
       {loading ? (
         <div className="mt-12 flex justify-center">
@@ -42,27 +56,33 @@ export default function CityPapers() {
           <p className="mt-4 text-sm text-muted-foreground">No city papers available yet. Check back soon.</p>
         </div>
       ) : (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {papers.map((p) => (
-            <div key={p.id} className="rounded-lg border border-border bg-card p-6">
-              <div className="flex items-start gap-3">
-                <FileText className="mt-1 h-5 w-5 shrink-0 text-primary" />
-                <div>
-                  <h3 className="font-serif text-lg font-semibold text-foreground">{p.title}</h3>
-                  <div className="mt-1 flex gap-2">
-                    {p.countries && (
-                      <span className="text-xs text-muted-foreground">{p.countries.name}</span>
-                    )}
-                    {p.cities && (
-                      <span className="text-xs text-primary">• {p.cities.name}</span>
-                    )}
-                  </div>
-                  {p.content_markdown && (
-                    <p className="mt-3 text-xs text-muted-foreground line-clamp-3">{p.content_markdown}</p>
-                  )}
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {papers.map(p => (
+            <button
+              key={p.id}
+              onClick={() => navigate(`/dashboard/city-papers/${p.id}`)}
+              className="group rounded-lg border border-border bg-card overflow-hidden text-left transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+            >
+              {p.thumbnail_url ? (
+                <div className="aspect-video bg-secondary overflow-hidden">
+                  <img src={p.thumbnail_url} alt={p.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                 </div>
+              ) : (
+                <div className="aspect-video bg-secondary/50 flex items-center justify-center">
+                  <FileText className="h-10 w-10 text-muted-foreground/30" />
+                </div>
+              )}
+              <div className="p-4">
+                <h3 className="font-serif text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">{p.title}</h3>
+                <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="h-3 w-3" />
+                  <span>{countries[p.country_id] || "—"}{p.city_id && cities[p.city_id] ? ` · ${cities[p.city_id]}` : ""}</span>
+                </div>
+                {p.description && (
+                  <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{p.description}</p>
+                )}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
