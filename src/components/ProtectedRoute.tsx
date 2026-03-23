@@ -1,13 +1,12 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const [status, setStatus] = useState<string | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
-  const fetchedForUserId = useRef<string | null>(null);
 
   const userId = user?.id ?? null;
 
@@ -15,12 +14,6 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     if (!userId) {
       setStatus(null);
       setStatusLoading(false);
-      fetchedForUserId.current = null;
-      return;
-    }
-
-    // Skip if we already fetched for this user
-    if (fetchedForUserId.current === userId && status !== null) {
       return;
     }
 
@@ -34,7 +27,6 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
       .single()
       .then(({ data }) => {
         if (!cancelled) {
-          fetchedForUserId.current = userId;
           setStatus(data?.status ?? "pending");
           setStatusLoading(false);
         }
@@ -43,7 +35,8 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [userId]);
 
-  if (loading || statusLoading) {
+  // Show spinner while auth or status is loading
+  if (loading || (user && statusLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
