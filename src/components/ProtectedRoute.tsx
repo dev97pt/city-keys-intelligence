@@ -1,38 +1,47 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const [status, setStatus] = useState<string | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
+  const fetchedForUserId = useRef<string | null>(null);
+
+  const userId = user?.id ?? null;
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setStatus(null);
       setStatusLoading(false);
+      fetchedForUserId.current = null;
       return;
     }
 
-    // Reset loading state when user changes
-    setStatusLoading(true);
+    // Skip if we already fetched for this user
+    if (fetchedForUserId.current === userId && status !== null) {
+      return;
+    }
 
+    setStatusLoading(true);
     let cancelled = false;
+
     supabase
       .from("profiles")
       .select("status")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single()
       .then(({ data }) => {
         if (!cancelled) {
+          fetchedForUserId.current = userId;
           setStatus(data?.status ?? "pending");
           setStatusLoading(false);
         }
       });
 
     return () => { cancelled = true; };
-  }, [user]);
+  }, [userId]);
 
   if (loading || statusLoading) {
     return (
