@@ -22,6 +22,7 @@ import AIAssistant from "./pages/dashboard/AIAssistant";
 import AdminPanel from "./pages/dashboard/AdminPanel";
 import ComingSoon from "./pages/dashboard/ComingSoon";
 import Settings from "./pages/dashboard/Settings";
+import CityPaperDetail from "./pages/dashboard/CityPaperDetail";
 import Courses from "./pages/dashboard/Courses";
 import CourseDetail from "./pages/dashboard/CourseDetail";
 import LessonViewer from "./pages/dashboard/LessonViewer";
