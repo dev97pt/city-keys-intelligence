@@ -10,18 +10,28 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user) {
+      setStatus(null);
       setStatusLoading(false);
       return;
     }
+
+    // Reset loading state when user changes
+    setStatusLoading(true);
+
+    let cancelled = false;
     supabase
       .from("profiles")
       .select("status")
       .eq("id", user.id)
       .single()
       .then(({ data }) => {
-        setStatus(data?.status ?? "pending");
-        setStatusLoading(false);
+        if (!cancelled) {
+          setStatus(data?.status ?? "pending");
+          setStatusLoading(false);
+        }
       });
+
+    return () => { cancelled = true; };
   }, [user]);
 
   if (loading || statusLoading) {
