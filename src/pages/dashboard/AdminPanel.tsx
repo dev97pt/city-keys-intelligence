@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, Search, Check, X, UserX, UserPlus, Trash2, Crown, Ban, Eye } from "lucide-react";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
+import { AdminCityPapers } from "@/components/admin/AdminCityPapers";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
