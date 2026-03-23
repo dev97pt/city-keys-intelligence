@@ -1,25 +1,27 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  // status: null = not yet fetched, string = fetched
   const [status, setStatus] = useState<string | null>(null);
-  const [statusLoading, setStatusLoading] = useState(true);
+  const lastFetchedUserId = useRef<string | null>(null);
 
   const userId = user?.id ?? null;
 
   useEffect(() => {
     if (!userId) {
+      lastFetchedUserId.current = null;
       setStatus(null);
-      setStatusLoading(false);
       return;
     }
 
-    setStatusLoading(true);
-    let cancelled = false;
+    // Already fetched for this user
+    if (lastFetchedUserId.current === userId) return;
 
+    let cancelled = false;
     supabase
       .from("profiles")
       .select("status")
@@ -27,16 +29,16 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
       .single()
       .then(({ data }) => {
         if (!cancelled) {
+          lastFetchedUserId.current = userId;
           setStatus(data?.status ?? "pending");
-          setStatusLoading(false);
         }
       });
 
     return () => { cancelled = true; };
   }, [userId]);
 
-  // Show spinner while auth or status is loading
-  if (loading || (user && statusLoading)) {
+  // Still loading auth
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -44,10 +46,21 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // No user at all
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
+  // User exists but status not yet fetched
+  if (status === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  // Status fetched but not active
   if (status !== "active") {
     return <Navigate to="/pending" replace />;
   }
