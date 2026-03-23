@@ -403,6 +403,7 @@ export default function AdminPanel() {
           <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="moderation">Moderation</TabsTrigger>
+          <TabsTrigger value="city-papers">City Papers</TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics" className="mt-6">
