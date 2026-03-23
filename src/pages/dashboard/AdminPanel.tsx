@@ -421,6 +421,10 @@ export default function AdminPanel() {
         <TabsContent value="moderation" className="mt-6">
           <CommunityModeration />
         </TabsContent>
+
+        <TabsContent value="city-papers" className="mt-6">
+          <AdminCityPapers />
+        </TabsContent>
       </Tabs>
     </div>
   );

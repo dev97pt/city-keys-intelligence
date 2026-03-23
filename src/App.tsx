@@ -62,6 +62,7 @@ const App = () => (
             >
               <Route index element={<Dashboard />} />
               <Route path="city-papers" element={<CityPapers />} />
+              <Route path="city-papers/:paperId" element={<CityPaperDetail />} />
               <Route path="neighborhood-intel" element={<NeighborhoodIntel />} />
               <Route path="experiences" element={<Experiences />} />
               <Route path="community" element={<Community />} />
