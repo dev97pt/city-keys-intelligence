@@ -303,7 +303,7 @@ export function AdminCityPapers() {
                 <Label>Premium Only</Label>
               </div>
             </div>
-            <Button onClick={save} className="w-full">{editing ? "Save Changes" : "Create Paper"}</Button>
+            <Button onClick={save} className="w-full" disabled={uploading}>{uploading ? "Uploading…" : editing ? "Save Changes" : "Create Paper"}</Button>
           </div>
         </DialogContent>
       </Dialog>
