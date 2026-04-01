@@ -34,7 +34,7 @@ export function HeroSection() {
         <FadeUp delay={0.55}>
           <div className="mx-auto mt-10 max-w-xl rounded-lg border border-border/50 bg-card/60 p-6 backdrop-blur-sm">
             <p className="text-sm italic text-muted-foreground leading-relaxed">
-              "I'd rather crush your dreams now than watch you lose 100K later. This platform gives you the truth, the tools, and the team to build roots the right way .”
+              "I'd rather crush your dreams now than watch you lose 100K later. This platform gives you the truth, the tools, and the team to build roots the right way.”
             </p>
             <p className="mt-3 text-xs font-medium text-primary">
               Ismael GQ -  Founder
