@@ -273,8 +273,21 @@ export function AdminCityPapers() {
               <Textarea value={form.content_markdown} onChange={e => setForm(f => ({ ...f, content_markdown: e.target.value }))} rows={10} className="font-mono text-xs" />
             </div>
             <div>
-              <Label>Thumbnail URL</Label>
-              <Input value={form.thumbnail_url} onChange={e => setForm(f => ({ ...f, thumbnail_url: e.target.value }))} placeholder="https://..." />
+              <Label>Thumbnail</Label>
+              {(thumbnailPreview || form.thumbnail_url) ? (
+                <div className="relative mt-1 rounded-lg overflow-hidden border border-border aspect-video bg-secondary">
+                  <img src={thumbnailPreview || form.thumbnail_url} alt="Thumbnail" className="w-full h-full object-cover" />
+                  <Button type="button" variant="destructive" size="sm" className="absolute top-2 right-2 h-7 w-7 p-0" onClick={clearThumbnail}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <label className="mt-1 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 cursor-pointer hover:border-primary/50 transition-colors">
+                  <Upload className="h-6 w-6 text-muted-foreground mb-2" />
+                  <span className="text-xs text-muted-foreground">Click to upload image</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailSelect} />
+                </label>
+              )}
             </div>
             <div>
               <Label>PDF URL (optional)</Label>
