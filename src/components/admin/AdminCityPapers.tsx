@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Search, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Eye, EyeOff, Upload, X } from "lucide-react";
 
 interface Paper {
   id: string;
@@ -62,7 +62,7 @@ export function AdminCityPapers() {
 
   const filteredCities = cities.filter(c => c.country_id === form.country_id);
 
-  const openCreate = () => { setEditing(null); setForm(empty); setOpen(true); };
+  const openCreate = () => { setEditing(null); setForm(empty); setThumbnailFile(null); setThumbnailPreview(null); setOpen(true); };
   const openEdit = (p: Paper) => {
     setEditing(p.id);
     setForm({
@@ -70,7 +70,36 @@ export function AdminCityPapers() {
       pdf_url: p.pdf_url || "", thumbnail_url: p.thumbnail_url || "",
       country_id: p.country_id, city_id: p.city_id || "", is_published: p.is_published, premium_only: p.premium_only,
     });
+    setThumbnailFile(null);
+    setThumbnailPreview(p.thumbnail_url || null);
     setOpen(true);
+  };
+
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setThumbnailFile(file);
+    setThumbnailPreview(URL.createObjectURL(file));
+  };
+
+  const clearThumbnail = () => {
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+    setForm(f => ({ ...f, thumbnail_url: "" }));
+  };
+
+  const uploadThumbnail = async (): Promise<string | null> => {
+    if (!thumbnailFile) return form.thumbnail_url || null;
+    const ext = thumbnailFile.name.split(".").pop();
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("city-paper-thumbnails").upload(path, thumbnailFile);
+    if (error) throw error;
+    const { data } = supabase.storage.from("city-paper-thumbnails").getPublicUrl(path);
+    return data.publicUrl;
   };
 
   const save = async () => {
@@ -78,12 +107,21 @@ export function AdminCityPapers() {
       toast({ variant: "destructive", title: "Title and country are required" });
       return;
     }
+    setUploading(true);
+    let thumbnailUrl = form.thumbnail_url || null;
+    try {
+      thumbnailUrl = await uploadThumbnail();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Upload failed", description: err.message });
+      setUploading(false);
+      return;
+    }
     const payload: any = {
       title: form.title,
       description: form.description || null,
       content_markdown: form.content_markdown || null,
       pdf_url: form.pdf_url || null,
-      thumbnail_url: form.thumbnail_url || null,
+      thumbnail_url: thumbnailUrl,
       country_id: form.country_id,
       city_id: form.city_id || null,
       is_published: form.is_published,
@@ -101,8 +139,11 @@ export function AdminCityPapers() {
     } else {
       toast({ title: editing ? "Paper updated" : "Paper created" });
       setOpen(false);
+      setThumbnailFile(null);
+      setThumbnailPreview(null);
       fetchAll();
     }
+    setUploading(false);
   };
 
   const deletePaper = async (id: string) => {
@@ -234,8 +275,21 @@ export function AdminCityPapers() {
               <Textarea value={form.content_markdown} onChange={e => setForm(f => ({ ...f, content_markdown: e.target.value }))} rows={10} className="font-mono text-xs" />
             </div>
             <div>
-              <Label>Thumbnail URL</Label>
-              <Input value={form.thumbnail_url} onChange={e => setForm(f => ({ ...f, thumbnail_url: e.target.value }))} placeholder="https://..." />
+              <Label>Thumbnail</Label>
+              {(thumbnailPreview || form.thumbnail_url) ? (
+                <div className="relative mt-1 rounded-lg overflow-hidden border border-border aspect-video bg-secondary">
+                  <img src={thumbnailPreview || form.thumbnail_url} alt="Thumbnail" className="w-full h-full object-cover" />
+                  <Button type="button" variant="destructive" size="sm" className="absolute top-2 right-2 h-7 w-7 p-0" onClick={clearThumbnail}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <label className="mt-1 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 cursor-pointer hover:border-primary/50 transition-colors">
+                  <Upload className="h-6 w-6 text-muted-foreground mb-2" />
+                  <span className="text-xs text-muted-foreground">Click to upload image</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailSelect} />
+                </label>
+              )}
             </div>
             <div>
               <Label>PDF URL (optional)</Label>
@@ -251,7 +305,7 @@ export function AdminCityPapers() {
                 <Label>Premium Only</Label>
               </div>
             </div>
-            <Button onClick={save} className="w-full">{editing ? "Save Changes" : "Create Paper"}</Button>
+            <Button onClick={save} className="w-full" disabled={uploading}>{uploading ? "Uploading…" : editing ? "Save Changes" : "Create Paper"}</Button>
           </div>
         </DialogContent>
       </Dialog>
