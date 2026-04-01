@@ -32,7 +32,7 @@ export default function PendingApproval() {
         <Button
           variant="outline"
           size="sm"
-          onClick={signOut}
+          onClick={handleSignOut}
           className="mt-8"
         >
           <LogOut className="mr-2 h-4 w-4" />
