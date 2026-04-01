@@ -1,6 +1,7 @@
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Clock, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function PendingApproval() {
   const { signOut } = useAuth();
