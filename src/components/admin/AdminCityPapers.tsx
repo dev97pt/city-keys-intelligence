@@ -73,9 +73,45 @@ export function AdminCityPapers() {
     setOpen(true);
   };
 
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setThumbnailFile(file);
+    setThumbnailPreview(URL.createObjectURL(file));
+  };
+
+  const clearThumbnail = () => {
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+    setForm(f => ({ ...f, thumbnail_url: "" }));
+  };
+
+  const uploadThumbnail = async (): Promise<string | null> => {
+    if (!thumbnailFile) return form.thumbnail_url || null;
+    const ext = thumbnailFile.name.split(".").pop();
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("city-paper-thumbnails").upload(path, thumbnailFile);
+    if (error) throw error;
+    const { data } = supabase.storage.from("city-paper-thumbnails").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
   const save = async () => {
     if (!form.title || !form.country_id) {
       toast({ variant: "destructive", title: "Title and country are required" });
+      return;
+    }
+    setUploading(true);
+    let thumbnailUrl = form.thumbnail_url || null;
+    try {
+      thumbnailUrl = await uploadThumbnail();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Upload failed", description: err.message });
+      setUploading(false);
       return;
     }
     const payload: any = {
@@ -83,7 +119,7 @@ export function AdminCityPapers() {
       description: form.description || null,
       content_markdown: form.content_markdown || null,
       pdf_url: form.pdf_url || null,
-      thumbnail_url: form.thumbnail_url || null,
+      thumbnail_url: thumbnailUrl,
       country_id: form.country_id,
       city_id: form.city_id || null,
       is_published: form.is_published,
