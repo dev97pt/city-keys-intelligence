@@ -70,6 +70,8 @@ export function AdminCityPapers() {
       pdf_url: p.pdf_url || "", thumbnail_url: p.thumbnail_url || "",
       country_id: p.country_id, city_id: p.city_id || "", is_published: p.is_published, premium_only: p.premium_only,
     });
+    setThumbnailFile(null);
+    setThumbnailPreview(p.thumbnail_url || null);
     setOpen(true);
   };
 
