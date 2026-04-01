@@ -133,10 +133,19 @@ function UserManagement() {
   };
 
   const deleteUser = async (userId: string) => {
-    // Delete profile (cascades)
-    const { error } = await supabase.from("profiles").delete().eq("id", userId);
-    if (error) toast({ variant: "destructive", title: "Error", description: error.message });
-    else { toast({ title: "User deleted" }); fetchAll(); }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke("admin-delete-user", {
+        body: { user_id: userId },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "User deleted" });
+      fetchAll();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message });
+    }
   };
 
   const filtered = users.filter((u) => {
