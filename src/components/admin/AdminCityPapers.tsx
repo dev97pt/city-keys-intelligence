@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Search, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Eye, EyeOff, Upload, X } from "lucide-react";
 
 interface Paper {
   id: string;
