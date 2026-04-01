@@ -62,7 +62,7 @@ export function AdminCityPapers() {
 
   const filteredCities = cities.filter(c => c.country_id === form.country_id);
 
-  const openCreate = () => { setEditing(null); setForm(empty); setOpen(true); };
+  const openCreate = () => { setEditing(null); setForm(empty); setThumbnailFile(null); setThumbnailPreview(null); setOpen(true); };
   const openEdit = (p: Paper) => {
     setEditing(p.id);
     setForm({
