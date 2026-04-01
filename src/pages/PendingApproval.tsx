@@ -5,6 +5,12 @@ import { useNavigate } from "react-router-dom";
 
 export default function PendingApproval() {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
