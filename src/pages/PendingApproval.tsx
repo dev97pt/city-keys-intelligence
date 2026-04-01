@@ -1,9 +1,16 @@
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Clock, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function PendingApproval() {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -25,7 +32,7 @@ export default function PendingApproval() {
         <Button
           variant="outline"
           size="sm"
-          onClick={signOut}
+          onClick={handleSignOut}
           className="mt-8"
         >
           <LogOut className="mr-2 h-4 w-4" />
