@@ -137,8 +137,11 @@ export function AdminCityPapers() {
     } else {
       toast({ title: editing ? "Paper updated" : "Paper created" });
       setOpen(false);
+      setThumbnailFile(null);
+      setThumbnailPreview(null);
       fetchAll();
     }
+    setUploading(false);
   };
 
   const deletePaper = async (id: string) => {
