@@ -1,27 +1,42 @@
 import { FadeUp, LineReveal } from "./ScrollReveal";
+import { X, ArrowRight, Check } from "lucide-react";
 
 const columns = [
   {
     title: "The Old Way",
+    icon: X,
+    iconBg: "bg-destructive/20",
+    iconColor: "text-destructive",
+    dotColor: "bg-destructive",
+    titleColor: "text-destructive",
     items: [
       "Google searches for professionals",
       "Trial and error (expensive mistakes)",
       "Conflicting advice everywhere",
+      "No clear roadmap or timeline",
       "Paying tourist prices for everything",
     ],
-    accent: false,
+    highlight: false,
   },
   {
     title: "The Shift",
+    icon: ArrowRight,
+    iconBg: "bg-primary/20",
+    iconColor: "text-primary",
+    dotColor: "bg-primary",
+    titleColor: "text-foreground",
     items: [
-      "Stop wasting time, money, and energy figuring it out alone.",
-      "Get the vetted network, proven playbook, and insider access from day one.",
+      "Stop wasting time, money, and energy figuring it out alone. Get the vetted network, proven playbook, and insider access from day one.",
     ],
-    accent: false,
+    highlight: true,
   },
   {
-    title: "",
-    kttcBrand: true,
+    title: "The Keys Way",
+    icon: Check,
+    iconBg: "bg-emerald-500/20",
+    iconColor: "text-emerald-400",
+    dotColor: "bg-emerald-400",
+    titleColor: "text-emerald-400",
     items: [
       "Vetted professionals ready to go",
       "Clear roadmap from arrival to ownership",
@@ -29,7 +44,7 @@ const columns = [
       "Community of builders on same journey",
       "Insider prices and exclusive access",
     ],
-    accent: true,
+    highlight: false,
   },
 ];
 
@@ -42,29 +57,51 @@ export function KTTCWaySection() {
           {columns.map((col, i) => (
             <FadeUp key={i} delay={i * 0.12}>
               <div
-                className={`rounded-lg border p-8 ${
-                  col.accent
-                    ? "border-primary/30 bg-primary/5"
-                    : "border-border/50 bg-card/50"
+                className={`flex h-full flex-col rounded-xl p-8 ${
+                  col.highlight
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border/30 bg-[hsl(220_30%_12%)]"
                 }`}
               >
-                {col.kttcBrand ? (
-                  <h3 className="mb-6 text-2xl">
-                    <span className="font-serif text-3xl font-bold text-primary">K</span>
-                    <span className="font-sans text-lg font-medium tracking-tight text-primary/80">tt</span>
-                    <span className="font-serif text-3xl font-bold text-primary">C</span>
-                    <span className="ml-2 font-serif text-xl text-foreground">Way</span>
-                  </h3>
-                ) : (
-                  <h3 className="mb-6 font-serif text-2xl font-semibold text-foreground">
-                    {col.title}
-                  </h3>
-                )}
-                <ul className="space-y-3">
+                {/* Icon circle */}
+                <div
+                  className={`mb-6 flex h-12 w-12 items-center justify-center rounded-full ${
+                    col.highlight
+                      ? "bg-primary-foreground/20"
+                      : col.iconBg
+                  }`}
+                >
+                  <col.icon
+                    className={`h-5 w-5 ${
+                      col.highlight ? "text-primary-foreground" : col.iconColor
+                    }`}
+                  />
+                </div>
+
+                {/* Title */}
+                <h3
+                  className={`mb-6 font-serif text-2xl font-bold ${
+                    col.highlight ? "text-primary-foreground" : col.titleColor
+                  }`}
+                >
+                  {col.title}
+                </h3>
+
+                {/* Items */}
+                <ul className="flex-1 space-y-3">
                   {col.items.map((item, j) => (
-                    <li key={j} className="flex items-start gap-3 text-sm text-muted-foreground leading-relaxed">
-                      {col.accent && (
-                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                    <li
+                      key={j}
+                      className={`flex items-start gap-3 text-sm leading-relaxed ${
+                        col.highlight
+                          ? "text-primary-foreground/90"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {!col.highlight && (
+                        <span
+                          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${col.dotColor}`}
+                        />
                       )}
                       <span>{item}</span>
                     </li>
