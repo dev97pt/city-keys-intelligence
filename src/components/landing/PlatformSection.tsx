@@ -30,13 +30,15 @@ export function PlatformSection() {
           </FadeUp>
         </div>
 
-        <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((f, i) => (
             <FadeUp key={f.title} delay={i * 0.06}>
-              <div className="group rounded-lg border border-border/40 bg-card/30 p-6 transition-colors hover:border-primary/20 hover:bg-card/60">
-                <f.icon className="h-6 w-6 text-primary" />
-                <h3 className="mt-4 font-serif text-lg font-semibold text-foreground">{f.title}</h3>
-                <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
+              <div className="group flex h-full flex-col rounded-lg border border-primary/20 bg-[hsl(220_30%_14%)] p-6 transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_20px_-5px_hsl(var(--primary)/0.15)]">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/20">
+                  <f.icon className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-serif text-lg font-bold text-primary">{f.title}</h3>
+                <p className="mt-2 flex-1 text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
             </FadeUp>
           ))}
