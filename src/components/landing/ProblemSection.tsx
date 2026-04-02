@@ -1,4 +1,4 @@
-import { TextReveal, FadeUp, LineReveal, SloganWipe } from "./ScrollReveal";
+import { TextReveal, FadeUp } from "./ScrollReveal";
 
 export function ProblemSection() {
   return (
@@ -23,43 +23,6 @@ export function ProblemSection() {
             You're settled in Portugal. NIF? Check. Bank account? Check. But the real moves — property, investment, building — still feel unclear.
           </p>
         </FadeUp>
-
-        <LineReveal className="mx-auto mt-12 w-48" delay={0.3} />
-
-        <div className="mt-16 grid gap-6 md:grid-cols-3">
-          {[
-            {
-              title: "Relocation",
-              desc: "Google searches for professionals. Trial and error with expensive mistakes.",
-            },
-            {
-              title: "Taxes & Legal",
-              desc: "Conflicting advice everywhere. No clear roadmap or timeline.",
-            },
-            {
-              title: "Property & Investment",
-              desc: "Paying tourist prices for everything. No access to real insider knowledge.",
-            },
-          ].map((item, i) => (
-            <FadeUp key={item.title} delay={i * 0.12}>
-              <div className="rounded-lg border border-border/50 bg-card/50 p-6 text-left">
-                <h3 className="font-serif text-xl font-semibold text-foreground">{item.title}</h3>
-                <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
-              </div>
-            </FadeUp>
-          ))}
-        </div>
-
-        {/* Slogan wipe reveal — TREF-style */}
-        <div className="mt-24">
-          <SloganWipe
-            lines={[
-              "Stop wasting time, money, and",
-              "energy figuring it out alone.",
-              "Get the insider playbook.",
-            ]}
-          />
-        </div>
       </div>
     </section>
   );
