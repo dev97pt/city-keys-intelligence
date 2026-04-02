@@ -2,6 +2,11 @@ import { motion } from "framer-motion";
 import { Users, Crown, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const cardHover = {
+  rest: { scale: 1, y: 0, zIndex: 1 },
+  hover: { scale: 1.05, y: -8, zIndex: 10 },
+};
+
 const paths = [
   {
     icon: Users,
@@ -70,11 +75,13 @@ export function HowItWorksSection() {
           {paths.map((p, i) => (
             <motion.div
               key={p.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial="rest"
+              whileHover="hover"
+              animate="rest"
+              variants={cardHover}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className={`relative flex flex-col rounded-lg border p-8 transition-all duration-300 ${
+              className={`relative flex flex-col rounded-lg border p-8 cursor-pointer transition-shadow duration-300 ${
                 p.popular
                   ? "border-primary/40 bg-primary/5 hover:border-primary/70 hover:bg-primary/10 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.2)]"
                   : "border-border/50 bg-card/50 hover:border-primary/30 hover:bg-card/80 hover:shadow-[0_0_30px_-5px_hsl(var(--primary)/0.1)]"
