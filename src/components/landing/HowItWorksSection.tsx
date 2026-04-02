@@ -2,6 +2,11 @@ import { motion } from "framer-motion";
 import { Users, Crown, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const cardHover = {
+  rest: { scale: 1, y: 0, zIndex: 1 },
+  hover: { scale: 1.05, y: -8, zIndex: 10 },
+};
+
 const paths = [
   {
     icon: Users,
