@@ -1,5 +1,6 @@
 import { FadeUp, LineReveal } from "./ScrollReveal";
 import { X, ArrowRight, Check } from "lucide-react";
+import { motion } from "framer-motion";
 
 const columns = [
   {
@@ -56,8 +57,10 @@ export function KTTCWaySection() { // updated
         <div className="grid gap-6 md:grid-cols-3">
           {columns.map((col, i) => (
             <FadeUp key={i} delay={i * 0.12}>
-              <div
-                className={`flex h-full flex-col rounded-xl p-8 ${
+              <motion.div
+                whileHover={{ scale: 1.05, zIndex: 10 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className={`flex h-full flex-col rounded-xl p-8 cursor-pointer ${
                   col.highlight
                     ? "bg-primary text-primary-foreground"
                     : "border border-border/30 bg-[hsl(220_30%_12%)]"
@@ -107,7 +110,7 @@ export function KTTCWaySection() { // updated
                     </li>
                   ))}
                 </ul>
-              </div>
+              </motion.div>
             </FadeUp>
           ))}
         </div>
