@@ -110,7 +110,7 @@ export function KTTCWaySection() { // updated
                     </li>
                   ))}
                 </ul>
-              </div>
+              </motion.div>
             </FadeUp>
           ))}
         </div>
