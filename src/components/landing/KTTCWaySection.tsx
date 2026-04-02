@@ -1,5 +1,6 @@
 import { FadeUp, LineReveal } from "./ScrollReveal";
 import { X, ArrowRight, Check } from "lucide-react";
+import { motion } from "framer-motion";
 
 const columns = [
   {
