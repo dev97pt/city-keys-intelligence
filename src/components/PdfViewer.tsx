@@ -28,11 +28,17 @@ export default function PdfViewer({ url, title }: PdfViewerProps) {
         onLoad={() => setLoading(false)}
         sandbox="allow-scripts allow-same-origin allow-popups"
       />
-      {/* Overlay to block right-click on the iframe area */}
+      {/* Transparent overlay to block all interaction (select, copy, right-click) */}
       <div
         className="absolute inset-0 z-[1]"
-        style={{ pointerEvents: "none" }}
+        style={{
+          pointerEvents: "auto",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+        }}
         onContextMenu={(e) => e.preventDefault()}
+        onCopy={(e) => e.preventDefault()}
+        onCut={(e) => e.preventDefault()}
       />
     </div>
   );
