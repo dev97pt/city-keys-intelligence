@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, MapPin, ExternalLink } from "lucide-react";
+import { ArrowLeft, FileText, MapPin } from "lucide-react";
+import PdfViewer from "@/components/PdfViewer";
 
 interface PaperDetail {
   id: string;
@@ -62,16 +63,10 @@ export default function CityPaperDetail() {
   );
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-4xl">
       <Button variant="ghost" size="sm" className="mb-6 text-muted-foreground" onClick={() => navigate("/dashboard/city-papers")}>
         <ArrowLeft className="h-4 w-4 mr-1" /> Back to Papers
       </Button>
-
-      {paper.thumbnail_url && (
-        <div className="rounded-lg overflow-hidden mb-6 aspect-video bg-secondary">
-          <img src={paper.thumbnail_url} alt={paper.title} className="w-full h-full object-cover" />
-        </div>
-      )}
 
       <h1 className="font-serif text-3xl font-semibold text-foreground">{paper.title}</h1>
 
@@ -86,13 +81,12 @@ export default function CityPaperDetail() {
       )}
 
       {paper.pdf_url && (
-        <a href={paper.pdf_url} target="_blank" rel="noopener noreferrer"
-          className="mt-4 inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors">
-          <ExternalLink className="h-4 w-4" /> View PDF
-        </a>
+        <div className="mt-8">
+          <PdfViewer url={paper.pdf_url} title={paper.title} />
+        </div>
       )}
 
-      {paper.content_markdown && (
+      {!paper.pdf_url && paper.content_markdown && (
         <div className="mt-8 prose prose-invert prose-sm max-w-none
           prose-headings:font-serif prose-headings:text-foreground
           prose-p:text-muted-foreground prose-strong:text-foreground
