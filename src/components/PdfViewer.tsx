@@ -32,7 +32,7 @@ export default function PdfViewer({ url, title }: PdfViewerProps) {
       <div
         className="absolute inset-0 z-[1]"
         style={{
-          pointerEvents: "auto",
+          pointerEvents: "none",
           userSelect: "none",
           WebkitUserSelect: "none",
         }}
