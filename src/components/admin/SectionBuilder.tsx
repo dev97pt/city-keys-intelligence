@@ -99,7 +99,7 @@ export function SectionBuilder({ sections, onChange }: SectionBuilderProps) {
 }
 
 function SectionEditor({ section, onUpdate }: { section: PaperSection; onUpdate: (data: any) => void }) {
-  const d = section.data;
+  const d = section.data as any;
 
   switch (section.type) {
     case "text":
