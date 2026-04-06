@@ -5,6 +5,7 @@ export type SectionType =
   | "pros_cons"
   | "bullet_list"
   | "buyer_profiles"
+  | "checklist"
   | "cta";
 
 export interface BaseSection {
@@ -52,6 +53,18 @@ export interface BuyerProfilesSection extends BaseSection {
   data: { idealBuyers: BuyerProfileItem[]; cautionBuyers: BuyerProfileItem[] };
 }
 
+export interface ChecklistItem {
+  task: string;
+  priority: "critical" | "important" | "optional";
+  timeline: string;
+  notes?: string;
+}
+
+export interface ChecklistSection extends BaseSection {
+  type: "checklist";
+  data: { phaseTitle: string; items: ChecklistItem[] };
+}
+
 export interface CTASection extends BaseSection {
   type: "cta";
   data: { title: string; description: string; email: string; whatsapp: string };
@@ -64,6 +77,7 @@ export type PaperSection =
   | ProsConsSection
   | BulletListSection
   | BuyerProfilesSection
+  | ChecklistSection
   | CTASection;
 
 export const SECTION_LABELS: Record<SectionType, string> = {
@@ -73,6 +87,7 @@ export const SECTION_LABELS: Record<SectionType, string> = {
   pros_cons: "Pros & Cons",
   bullet_list: "Bullet List",
   buyer_profiles: "Buyer Profiles",
+  checklist: "Checklist",
   cta: "Call to Action",
 };
 
@@ -96,6 +111,15 @@ export function createDefaultSection(type: SectionType): PaperSection {
         data: {
           idealBuyers: [{ label: "", description: "" }],
           cautionBuyers: [{ label: "", description: "" }],
+        },
+      };
+    case "checklist":
+      return {
+        id,
+        type,
+        data: {
+          phaseTitle: "",
+          items: [{ task: "", priority: "important", timeline: "" }],
         },
       };
     case "cta":
