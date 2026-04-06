@@ -11,6 +11,7 @@ import {
   createDefaultSection,
   MetricItem,
   BuyerProfileItem,
+  ChecklistItem,
 } from "@/types/cityPaperSections";
 import { GripVertical, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -141,7 +142,7 @@ function SectionEditor({ section, onUpdate }: { section: PaperSection; onUpdate:
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label className="text-xs text-emerald-400">Green Flags</Label>
-            {(d.greenFlags as string[]).map((f, i) => (
+            {(d.greenFlags as string[]).map((f: string, i: number) => (
               <div key={i} className="flex gap-1">
                 <Input value={f} className="text-xs" onChange={e => {
                   const arr = [...d.greenFlags]; arr[i] = e.target.value; onUpdate({ ...d, greenFlags: arr });
@@ -157,7 +158,7 @@ function SectionEditor({ section, onUpdate }: { section: PaperSection; onUpdate:
           </div>
           <div className="space-y-2">
             <Label className="text-xs text-red-400">Red Flags</Label>
-            {(d.redFlags as string[]).map((f, i) => (
+            {(d.redFlags as string[]).map((f: string, i: number) => (
               <div key={i} className="flex gap-1">
                 <Input value={f} className="text-xs" onChange={e => {
                   const arr = [...d.redFlags]; arr[i] = e.target.value; onUpdate({ ...d, redFlags: arr });
@@ -178,7 +179,7 @@ function SectionEditor({ section, onUpdate }: { section: PaperSection; onUpdate:
       return (
         <>
           <Input placeholder="Section title" value={d.title} onChange={e => onUpdate({ ...d, title: e.target.value })} />
-          {(d.items as string[]).map((item, i) => (
+          {(d.items as string[]).map((item: string, i: number) => (
             <div key={i} className="flex gap-1">
               <Input value={item} className="text-xs" onChange={e => {
                 const items = [...d.items]; items[i] = e.target.value; onUpdate({ ...d, items });
@@ -230,6 +231,39 @@ function SectionEditor({ section, onUpdate }: { section: PaperSection; onUpdate:
             </Button>
           </div>
         </div>
+      );
+
+    case "checklist":
+      return (
+        <>
+          <Input placeholder="Phase title (e.g. Before Arrival (30 Days Out))" value={d.phaseTitle} onChange={e => onUpdate({ ...d, phaseTitle: e.target.value })} />
+          {(d.items as ChecklistItem[]).map((item, i) => (
+            <div key={i} className="flex gap-2 items-start">
+              <Input placeholder="Task" value={item.task} className="flex-1 text-xs" onChange={e => {
+                const items = [...d.items]; items[i] = { ...item, task: e.target.value }; onUpdate({ ...d, items });
+              }} />
+              <Select value={item.priority} onValueChange={v => {
+                const items = [...d.items]; items[i] = { ...item, priority: v }; onUpdate({ ...d, items });
+              }}>
+                <SelectTrigger className="w-28 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="important">Important</SelectItem>
+                  <SelectItem value="optional">Optional</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input placeholder="Timeline" value={item.timeline} className="w-28 text-xs" onChange={e => {
+                const items = [...d.items]; items[i] = { ...item, timeline: e.target.value }; onUpdate({ ...d, items });
+              }} />
+              <Button variant="ghost" size="sm" className="h-10 w-8 p-0 text-destructive shrink-0" onClick={() => {
+                onUpdate({ ...d, items: d.items.filter((_: any, j: number) => j !== i) });
+              }}><Trash2 className="h-3 w-3" /></Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={() => onUpdate({ ...d, items: [...d.items, { task: "", priority: "important", timeline: "" }] })}>
+            <Plus className="h-3 w-3 mr-1" /> Add Item
+          </Button>
+        </>
       );
 
     case "cta":
