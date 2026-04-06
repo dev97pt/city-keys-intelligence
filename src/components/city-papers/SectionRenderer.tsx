@@ -6,6 +6,7 @@ import type {
   ProsConsSection,
   BulletListSection,
   BuyerProfilesSection,
+  ChecklistSection,
   CTASection,
 } from "@/types/cityPaperSections";
 import { Lightbulb, CheckCircle2, XCircle, User, AlertTriangle, Mail, MessageCircle } from "lucide-react";
@@ -31,14 +32,9 @@ function RenderMetrics({ data }: { data: MetricsSection["data"] }) {
       )}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {data.metrics.map((m, i) => (
-          <div
-            key={i}
-            className="rounded-xl border border-primary/20 bg-primary/5 p-5 text-center"
-          >
+          <div key={i} className="rounded-xl border border-primary/20 bg-primary/5 p-5 text-center">
             <p className="text-2xl font-bold text-primary font-serif">{m.value}</p>
-            <p className="mt-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              {m.label}
-            </p>
+            <p className="mt-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">{m.label}</p>
           </div>
         ))}
       </div>
@@ -152,6 +148,49 @@ function RenderBuyerProfiles({ data }: { data: BuyerProfilesSection["data"] }) {
   );
 }
 
+/* ── Checklist ── */
+const PRIORITY_STYLES: Record<string, { label: string; className: string }> = {
+  critical: { label: "CRITICAL", className: "text-red-400 font-bold" },
+  important: { label: "IMPORTANT", className: "text-primary font-bold" },
+  optional: { label: "OPTIONAL", className: "text-muted-foreground font-bold" },
+};
+
+function RenderChecklist({ data }: { data: ChecklistSection["data"] }) {
+  return (
+    <section className="space-y-4">
+      {/* Phase header - gold bar like the document */}
+      {data.phaseTitle && (
+        <div className="bg-primary py-2.5 px-5 rounded-sm">
+          <h3 className="font-serif text-xl font-bold text-primary-foreground">{data.phaseTitle}</h3>
+        </div>
+      )}
+
+      <div className="space-y-0 divide-y divide-border/50">
+        {data.items.map((item, i) => {
+          const priority = PRIORITY_STYLES[item.priority] || PRIORITY_STYLES.important;
+          return (
+            <div key={i} className="grid grid-cols-[auto_1fr_auto_auto] md:grid-cols-[24px_1fr_120px_120px] gap-3 items-start py-3 px-2">
+              {/* Checkbox visual */}
+              <div className="mt-0.5 h-4 w-4 rounded border border-muted-foreground/40 shrink-0" />
+
+              {/* Task description */}
+              <p className="text-sm text-foreground/90 leading-relaxed">{item.task}</p>
+
+              {/* Priority badge */}
+              <span className={`text-[10px] uppercase tracking-wider whitespace-nowrap ${priority.className}`}>
+                {priority.label}
+              </span>
+
+              {/* Timeline */}
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{item.timeline}</span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 /* ── CTA ── */
 function RenderCTA({ data }: { data: CTASection["data"] }) {
   return (
@@ -197,6 +236,8 @@ export function SectionRenderer({ section }: { section: PaperSection }) {
       return <RenderBulletList data={section.data} />;
     case "buyer_profiles":
       return <RenderBuyerProfiles data={section.data} />;
+    case "checklist":
+      return <RenderChecklist data={section.data} />;
     case "cta":
       return <RenderCTA data={section.data} />;
     default:
