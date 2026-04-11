@@ -757,6 +757,113 @@ export type Database = {
           },
         ]
       }
+      neighborhood_details: {
+        Row: {
+          ai_story: string | null
+          avg_price: number | null
+          beach_access: boolean | null
+          bike_lanes: boolean | null
+          bus_stations: Json | null
+          city_avg_price: number | null
+          cons: Json | null
+          coworking_density: string | null
+          coworking_spaces: Json | null
+          created_at: string
+          expat_popularity: string | null
+          green_areas: string | null
+          hospitals: Json | null
+          id: string
+          ideal_for: Json | null
+          kttc_insight: string | null
+          markets: Json | null
+          metro_access: boolean | null
+          metro_lines: Json | null
+          neighborhood_id: string
+          not_ideal_for: Json | null
+          parks: Json | null
+          price_growth: number | null
+          price_level: string | null
+          pros: Json | null
+          story_intro: string | null
+          tourist_density: string | null
+          train_stations: Json | null
+          transport_quality: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_story?: string | null
+          avg_price?: number | null
+          beach_access?: boolean | null
+          bike_lanes?: boolean | null
+          bus_stations?: Json | null
+          city_avg_price?: number | null
+          cons?: Json | null
+          coworking_density?: string | null
+          coworking_spaces?: Json | null
+          created_at?: string
+          expat_popularity?: string | null
+          green_areas?: string | null
+          hospitals?: Json | null
+          id?: string
+          ideal_for?: Json | null
+          kttc_insight?: string | null
+          markets?: Json | null
+          metro_access?: boolean | null
+          metro_lines?: Json | null
+          neighborhood_id: string
+          not_ideal_for?: Json | null
+          parks?: Json | null
+          price_growth?: number | null
+          price_level?: string | null
+          pros?: Json | null
+          story_intro?: string | null
+          tourist_density?: string | null
+          train_stations?: Json | null
+          transport_quality?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_story?: string | null
+          avg_price?: number | null
+          beach_access?: boolean | null
+          bike_lanes?: boolean | null
+          bus_stations?: Json | null
+          city_avg_price?: number | null
+          cons?: Json | null
+          coworking_density?: string | null
+          coworking_spaces?: Json | null
+          created_at?: string
+          expat_popularity?: string | null
+          green_areas?: string | null
+          hospitals?: Json | null
+          id?: string
+          ideal_for?: Json | null
+          kttc_insight?: string | null
+          markets?: Json | null
+          metro_access?: boolean | null
+          metro_lines?: Json | null
+          neighborhood_id?: string
+          not_ideal_for?: Json | null
+          parks?: Json | null
+          price_growth?: number | null
+          price_level?: string | null
+          pros?: Json | null
+          story_intro?: string | null
+          tourist_density?: string | null
+          train_stations?: Json | null
+          transport_quality?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "neighborhood_details_neighborhood_id_fkey"
+            columns: ["neighborhood_id"]
+            isOneToOne: true
+            referencedRelation: "neighborhoods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       neighborhood_stats: {
         Row: {
           city_id: string
@@ -809,6 +916,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      neighborhoods: {
+        Row: {
+          city: string
+          country: string
+          created_at: string
+          distance_to_center: string | null
+          id: string
+          investment_score: number | null
+          is_published: boolean
+          lifestyle_score: number | null
+          name: string
+          price_per_m2: number | null
+          region: string
+          risk_level: string | null
+          safety_score: number | null
+          transport_score: number | null
+          updated_at: string
+          vibe: string | null
+          yield: number | null
+        }
+        Insert: {
+          city: string
+          country?: string
+          created_at?: string
+          distance_to_center?: string | null
+          id?: string
+          investment_score?: number | null
+          is_published?: boolean
+          lifestyle_score?: number | null
+          name: string
+          price_per_m2?: number | null
+          region: string
+          risk_level?: string | null
+          safety_score?: number | null
+          transport_score?: number | null
+          updated_at?: string
+          vibe?: string | null
+          yield?: number | null
+        }
+        Update: {
+          city?: string
+          country?: string
+          created_at?: string
+          distance_to_center?: string | null
+          id?: string
+          investment_score?: number | null
+          is_published?: boolean
+          lifestyle_score?: number | null
+          name?: string
+          price_per_m2?: number | null
+          region?: string
+          risk_level?: string | null
+          safety_score?: number | null
+          transport_score?: number | null
+          updated_at?: string
+          vibe?: string | null
+          yield?: number | null
+        }
+        Relationships: []
       }
       partners: {
         Row: {
@@ -1268,6 +1435,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_shortlists: {
+        Row: {
+          created_at: string
+          id: string
+          neighborhood_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          neighborhood_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          neighborhood_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_shortlists_neighborhood_id_fkey"
+            columns: ["neighborhood_id"]
+            isOneToOne: false
+            referencedRelation: "neighborhoods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webinars: {
         Row: {
