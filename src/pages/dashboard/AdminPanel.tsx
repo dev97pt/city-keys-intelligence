@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, Search, Check, X, UserX, UserPlus, Trash2, Crown, Ban, Eye } from "lucide-react";
 import { AdminAnalytics } from "@/components/admin/AdminAnalytics";
 import { AdminCityPapers } from "@/components/admin/AdminCityPapers";
+import AdminNeighborhoods from "@/components/admin/AdminNeighborhoods";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -413,6 +414,7 @@ export default function AdminPanel() {
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="moderation">Moderation</TabsTrigger>
           <TabsTrigger value="city-papers">City Papers</TabsTrigger>
+          <TabsTrigger value="neighborhoods">Neighborhoods</TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics" className="mt-6">
@@ -433,6 +435,10 @@ export default function AdminPanel() {
 
         <TabsContent value="city-papers" className="mt-6">
           <AdminCityPapers />
+        </TabsContent>
+
+        <TabsContent value="neighborhoods" className="mt-6">
+          <AdminNeighborhoods />
         </TabsContent>
       </Tabs>
     </div>
