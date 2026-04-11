@@ -15,6 +15,7 @@ import DashboardLayout from "./components/dashboard/DashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
 import CityPapers from "./pages/dashboard/CityPapers";
 import NeighborhoodIntel from "./pages/dashboard/NeighborhoodIntel";
+import NeighborhoodStory from "./components/neighborhood/NeighborhoodStory";
 import Experiences from "./pages/dashboard/Experiences";
 import Community from "./pages/dashboard/Community";
 import DealCalculators from "./pages/dashboard/DealCalculators";
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="city-papers" element={<CityPapers />} />
               <Route path="city-papers/:paperId" element={<CityPaperDetail />} />
               <Route path="neighborhood-intel" element={<NeighborhoodIntel />} />
+              <Route path="neighborhood-intel/:neighborhoodId" element={<NeighborhoodStory />} />
               <Route path="experiences" element={<Experiences />} />
               <Route path="community" element={<Community />} />
               <Route path="calculators" element={<DealCalculators />} />
