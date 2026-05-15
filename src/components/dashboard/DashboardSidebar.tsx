@@ -15,8 +15,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/components/AuthProvider";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import {
   Sidebar,
   SidebarContent,
@@ -50,15 +49,8 @@ const comingSoonItems = [
 export function DashboardSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { user, signOut } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").then(({ data }) => {
-      setIsAdmin(data && data.length > 0);
-    });
-  }, [user]);
+  const { signOut } = useAuth();
+  const { isAdmin } = useUserAccess();
 
   return (
     <Sidebar collapsible="icon">
