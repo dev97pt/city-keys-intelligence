@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/components/AuthProvider";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,18 +14,6 @@ import {
   Plus, Trash2, Edit, GripVertical, BookOpen, Play, Save,
   ChevronDown, ChevronRight, Shield, BarChart3, Users, GraduationCap
 } from "lucide-react";
-
-function useIsAdmin() {
-  const { user } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(() => {
-    if (!user) return;
-    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").then(({ data }) => {
-      setIsAdmin(data && data.length > 0);
-    });
-  }, [user]);
-  return isAdmin;
-}
 
 /* ── Course Editor ── */
 function CourseManager() {
@@ -447,7 +435,9 @@ function Spinner() {
 
 /* ── Main Admin Courses ── */
 export default function AdminCourses() {
-  const isAdmin = useIsAdmin();
+  const { isAdmin, loading } = useUserAccess();
+
+  if (loading) return <Spinner />;
 
   if (!isAdmin) {
     return (

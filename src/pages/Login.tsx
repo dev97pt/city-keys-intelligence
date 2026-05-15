@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { getDashboardRedirectPath, getUserAccess } from "@/hooks/useUserAccess";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -16,12 +17,16 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
       toast({ variant: "destructive", title: "Login failed", description: error.message });
-    } else {
-      navigate("/dashboard");
+      return;
+    }
+
+    if (data.user) {
+      const access = await getUserAccess(data.user.id);
+      navigate(getDashboardRedirectPath(access), { replace: true });
     }
   };
 

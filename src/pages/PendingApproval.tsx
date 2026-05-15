@@ -2,10 +2,19 @@ import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Clock, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { getDashboardRedirectPath, useUserAccess } from "@/hooks/useUserAccess";
 
 export default function PendingApproval() {
   const { signOut } = useAuth();
+  const { isAdmin, status, loading } = useUserAccess();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && (isAdmin || status === "active")) {
+      navigate(getDashboardRedirectPath({ isAdmin, status }), { replace: true });
+    }
+  }, [isAdmin, loading, navigate, status]);
 
   const handleSignOut = async () => {
     await signOut();

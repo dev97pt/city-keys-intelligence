@@ -1,41 +1,11 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
-import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useUserAccess } from "@/hooks/useUserAccess";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  // status: null = not yet fetched, string = fetched
-  const [status, setStatus] = useState<string | null>(null);
-  const lastFetchedUserId = useRef<string | null>(null);
-
-  const userId = user?.id ?? null;
-
-  useEffect(() => {
-    if (!userId) {
-      lastFetchedUserId.current = null;
-      setStatus(null);
-      return;
-    }
-
-    // Already fetched for this user
-    if (lastFetchedUserId.current === userId) return;
-
-    let cancelled = false;
-    supabase
-      .from("profiles")
-      .select("status")
-      .eq("id", userId)
-      .single()
-      .then(({ data }) => {
-        if (!cancelled) {
-          lastFetchedUserId.current = userId;
-          setStatus(data?.status ?? "pending");
-        }
-      });
-
-    return () => { cancelled = true; };
-  }, [userId]);
+  const { isAdmin, status, loading: accessLoading } = useUserAccess();
+  const location = useLocation();
 
   // Still loading auth
   if (loading) {
@@ -52,7 +22,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   // User exists but status not yet fetched
-  if (status === null) {
+  if (accessLoading || status === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -60,8 +30,12 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Status fetched but not active
-  if (status !== "active") {
+  if (isAdmin && location.pathname === "/dashboard") {
+    return <Navigate to="/dashboard/admin" replace />;
+  }
+
+  // Admin access always wins over profile approval status.
+  if (!isAdmin && status !== "active") {
     return <Navigate to="/pending" replace />;
   }
 
