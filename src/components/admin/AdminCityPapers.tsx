@@ -86,13 +86,51 @@ export function AdminCityPapers() {
     setForm({
       title: p.title, subtitle: p.subtitle || "", description: p.description || "",
       content_markdown: p.content_markdown || "", pdf_url: p.pdf_url || "",
+      pdf_path: p.pdf_path || "",
       thumbnail_url: p.thumbnail_url || "", country_id: p.country_id,
       city_id: p.city_id || "", is_published: p.is_published, premium_only: p.premium_only,
     });
     setSections(Array.isArray(p.sections) && p.sections.length > 0 ? p.sections : getDefaultSections());
     setThumbnailFile(null);
     setThumbnailPreview(p.thumbnail_url || null);
+    setPdfFile(null);
     setOpen(true);
+  };
+
+  const handlePdfSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast({ variant: "destructive", title: "PDF files only" });
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "File too large", description: "Max 50 MB." });
+      return;
+    }
+    setPdfFile(file);
+  };
+
+  const uploadPdf = async (): Promise<string | null> => {
+    if (!pdfFile) return form.pdf_path || null;
+    const path = `${crypto.randomUUID()}.pdf`;
+    const { error } = await supabase.storage
+      .from("city-papers")
+      .upload(path, pdfFile, { contentType: "application/pdf", upsert: false });
+    if (error) throw error;
+    // Best-effort: remove previous file when replacing
+    if (form.pdf_path && form.pdf_path !== path) {
+      await supabase.storage.from("city-papers").remove([form.pdf_path]);
+    }
+    return path;
+  };
+
+  const clearPdf = async () => {
+    if (form.pdf_path) {
+      await supabase.storage.from("city-papers").remove([form.pdf_path]);
+    }
+    setPdfFile(null);
+    setForm(f => ({ ...f, pdf_path: "" }));
   };
 
   const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
