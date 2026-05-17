@@ -16,6 +16,7 @@ interface PaperDetail {
   description: string | null;
   content_markdown: string | null;
   pdf_url: string | null;
+  pdf_path: string | null;
   thumbnail_url: string | null;
   sections: PaperSection[] | null;
   created_at: string;
