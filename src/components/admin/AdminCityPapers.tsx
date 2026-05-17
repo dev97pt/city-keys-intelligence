@@ -55,6 +55,7 @@ export function AdminCityPapers() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
 
   const fetchAll = async () => {
     const [{ data: p }, { data: co }, { data: ci }] = await Promise.all([
