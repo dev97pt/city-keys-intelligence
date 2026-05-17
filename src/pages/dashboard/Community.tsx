@@ -44,10 +44,41 @@ export default function Community() {
   const fetchPosts = async () => {
     const { data } = await supabase
       .from("posts")
-      .select("id, user_id, title, content, category, created_at, profiles(full_name), likes(id, user_id), comments(id, user_id, content, created_at, profiles(full_name))")
+      .select("id, user_id, title, content, category, created_at, likes(id, user_id), comments(id, user_id, content, created_at)")
       .eq("category", activeCategory)
       .order("created_at", { ascending: false });
-    setPosts((data as unknown as Post[]) || []);
+
+    const rows = (data as any[]) || [];
+
+    // Collect all user ids referenced by posts + comments and fetch
+    // display names from the safe public_user_profiles view (no PII).
+    const userIds = new Set<string>();
+    rows.forEach((p) => {
+      userIds.add(p.user_id);
+      (p.comments || []).forEach((c: any) => userIds.add(c.user_id));
+    });
+
+    let nameMap: Record<string, string | null> = {};
+    if (userIds.size > 0) {
+      const { data: profs } = await supabase
+        .from("public_user_profiles" as any)
+        .select("id, full_name")
+        .in("id", Array.from(userIds));
+      (profs as any[] | null)?.forEach((p) => {
+        nameMap[p.id] = p.full_name;
+      });
+    }
+
+    const enriched: Post[] = rows.map((p) => ({
+      ...p,
+      profiles: { full_name: nameMap[p.user_id] ?? null },
+      comments: (p.comments || []).map((c: any) => ({
+        ...c,
+        profiles: { full_name: nameMap[c.user_id] ?? null },
+      })),
+    }));
+
+    setPosts(enriched);
     setLoading(false);
   };
 
