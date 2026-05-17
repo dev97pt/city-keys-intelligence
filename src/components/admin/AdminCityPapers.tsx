@@ -21,6 +21,7 @@ interface Paper {
   description: string | null;
   content_markdown: string | null;
   pdf_url: string | null;
+  pdf_path: string | null;
   thumbnail_url: string | null;
   country_id: string;
   city_id: string | null;
@@ -34,7 +35,8 @@ interface Country { id: string; name: string; }
 interface City { id: string; name: string; country_id: string; }
 
 const empty = {
-  title: "", subtitle: "", description: "", content_markdown: "", pdf_url: "", thumbnail_url: "",
+  title: "", subtitle: "", description: "", content_markdown: "",
+  pdf_url: "", pdf_path: "", thumbnail_url: "",
   country_id: "", city_id: "", is_published: false, premium_only: false,
 };
 
@@ -53,6 +55,7 @@ export function AdminCityPapers() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
 
   const fetchAll = async () => {
     const [{ data: p }, { data: co }, { data: ci }] = await Promise.all([
@@ -76,6 +79,7 @@ export function AdminCityPapers() {
     setSections(getDefaultSections());
     setThumbnailFile(null);
     setThumbnailPreview(null);
+    setPdfFile(null);
     setOpen(true);
   };
 
@@ -84,13 +88,51 @@ export function AdminCityPapers() {
     setForm({
       title: p.title, subtitle: p.subtitle || "", description: p.description || "",
       content_markdown: p.content_markdown || "", pdf_url: p.pdf_url || "",
+      pdf_path: p.pdf_path || "",
       thumbnail_url: p.thumbnail_url || "", country_id: p.country_id,
       city_id: p.city_id || "", is_published: p.is_published, premium_only: p.premium_only,
     });
     setSections(Array.isArray(p.sections) && p.sections.length > 0 ? p.sections : getDefaultSections());
     setThumbnailFile(null);
     setThumbnailPreview(p.thumbnail_url || null);
+    setPdfFile(null);
     setOpen(true);
+  };
+
+  const handlePdfSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast({ variant: "destructive", title: "PDF files only" });
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "File too large", description: "Max 50 MB." });
+      return;
+    }
+    setPdfFile(file);
+  };
+
+  const uploadPdf = async (): Promise<string | null> => {
+    if (!pdfFile) return form.pdf_path || null;
+    const path = `${crypto.randomUUID()}.pdf`;
+    const { error } = await supabase.storage
+      .from("city-papers")
+      .upload(path, pdfFile, { contentType: "application/pdf", upsert: false });
+    if (error) throw error;
+    // Best-effort: remove previous file when replacing
+    if (form.pdf_path && form.pdf_path !== path) {
+      await supabase.storage.from("city-papers").remove([form.pdf_path]);
+    }
+    return path;
+  };
+
+  const clearPdf = async () => {
+    if (form.pdf_path) {
+      await supabase.storage.from("city-papers").remove([form.pdf_path]);
+    }
+    setPdfFile(null);
+    setForm(f => ({ ...f, pdf_path: "" }));
   };
 
   const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,8 +165,11 @@ export function AdminCityPapers() {
     }
     setUploading(true);
     let thumbnailUrl = form.thumbnail_url || null;
-    try { thumbnailUrl = await uploadThumbnail(); }
-    catch (err: any) {
+    let pdfPath = form.pdf_path || null;
+    try {
+      thumbnailUrl = await uploadThumbnail();
+      pdfPath = await uploadPdf();
+    } catch (err: any) {
       toast({ variant: "destructive", title: "Upload failed", description: err.message });
       setUploading(false);
       return;
@@ -135,6 +180,7 @@ export function AdminCityPapers() {
       description: form.description || null,
       content_markdown: form.content_markdown || null,
       pdf_url: form.pdf_url || null,
+      pdf_path: pdfPath,
       thumbnail_url: thumbnailUrl,
       country_id: form.country_id,
       city_id: form.city_id || null,
@@ -160,6 +206,10 @@ export function AdminCityPapers() {
   };
 
   const deletePaper = async (id: string) => {
+    const paper = papers.find(p => p.id === id);
+    if (paper?.pdf_path) {
+      await supabase.storage.from("city-papers").remove([paper.pdf_path]);
+    }
     const { error } = await supabase.from("city_papers").delete().eq("id", id);
     if (error) toast({ variant: "destructive", title: "Error", description: error.message });
     else { toast({ title: "Paper deleted" }); fetchAll(); }
@@ -308,17 +358,53 @@ export function AdminCityPapers() {
               )}
             </div>
 
-            {/* Section Builder */}
+            {/* PDF document (primary content) */}
             <div className="border-t border-border pt-4">
-              <SectionBuilder sections={sections} onChange={setSections} />
+              <Label>PDF Document</Label>
+              <p className="text-xs text-muted-foreground mt-1 mb-2">
+                Stored privately. Users view it through a secure embedded viewer.
+              </p>
+              {form.pdf_path || pdfFile ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary/30 px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Upload className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-xs text-foreground truncate">
+                      {pdfFile ? pdfFile.name : form.pdf_path}
+                    </span>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <label className="cursor-pointer text-xs text-primary hover:underline">
+                      Replace
+                      <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfSelect} />
+                    </label>
+                    <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={clearPdf}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 cursor-pointer hover:border-primary/50 transition-colors">
+                  <Upload className="h-6 w-6 text-muted-foreground mb-2" />
+                  <span className="text-xs text-muted-foreground">Click to upload PDF (max 50 MB)</span>
+                  <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfSelect} />
+                </label>
+              )}
             </div>
+
+            {/* Section Builder (optional structured layout) */}
+            <details className="border-t border-border pt-4">
+              <summary className="text-xs text-muted-foreground cursor-pointer">Optional: structured sections</summary>
+              <div className="mt-3">
+                <SectionBuilder sections={sections} onChange={setSections} />
+              </div>
+            </details>
 
             {/* Legacy fields (collapsed) */}
             <details className="border-t border-border pt-4">
-              <summary className="text-xs text-muted-foreground cursor-pointer">Legacy fields (PDF / Markdown)</summary>
+              <summary className="text-xs text-muted-foreground cursor-pointer">Legacy fields</summary>
               <div className="space-y-3 mt-3">
                 <div>
-                  <Label>PDF URL</Label>
+                  <Label>External PDF URL (legacy)</Label>
                   <Input value={form.pdf_url} onChange={e => setForm(f => ({ ...f, pdf_url: e.target.value }))} placeholder="https://..." />
                 </div>
                 <div>
