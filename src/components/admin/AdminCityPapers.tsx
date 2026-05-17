@@ -165,8 +165,11 @@ export function AdminCityPapers() {
     }
     setUploading(true);
     let thumbnailUrl = form.thumbnail_url || null;
-    try { thumbnailUrl = await uploadThumbnail(); }
-    catch (err: any) {
+    let pdfPath = form.pdf_path || null;
+    try {
+      thumbnailUrl = await uploadThumbnail();
+      pdfPath = await uploadPdf();
+    } catch (err: any) {
       toast({ variant: "destructive", title: "Upload failed", description: err.message });
       setUploading(false);
       return;
@@ -177,6 +180,7 @@ export function AdminCityPapers() {
       description: form.description || null,
       content_markdown: form.content_markdown || null,
       pdf_url: form.pdf_url || null,
+      pdf_path: pdfPath,
       thumbnail_url: thumbnailUrl,
       country_id: form.country_id,
       city_id: form.city_id || null,
@@ -202,6 +206,10 @@ export function AdminCityPapers() {
   };
 
   const deletePaper = async (id: string) => {
+    const paper = papers.find(p => p.id === id);
+    if (paper?.pdf_path) {
+      await supabase.storage.from("city-papers").remove([paper.pdf_path]);
+    }
     const { error } = await supabase.from("city_papers").delete().eq("id", id);
     if (error) toast({ variant: "destructive", title: "Error", description: error.message });
     else { toast({ title: "Paper deleted" }); fetchAll(); }
