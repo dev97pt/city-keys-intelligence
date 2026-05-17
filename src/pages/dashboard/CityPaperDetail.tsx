@@ -73,15 +73,34 @@ export default function CityPaperDetail() {
     ? paper.sections
     : [];
 
-  const hasStructuredContent = sections.length > 0;
+  const hasPdf = !!(paper.pdf_path || paper.pdf_url);
+  const hasStructuredContent = !hasPdf && sections.length > 0;
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-5xl">
       <Button variant="ghost" size="sm" className="mb-6 text-muted-foreground" onClick={() => navigate("/dashboard/city-papers")}>
         <ArrowLeft className="h-4 w-4 mr-1" /> Back to Papers
       </Button>
 
-      {hasStructuredContent ? (
+      {hasPdf ? (
+        <div className="space-y-6">
+          <header>
+            <h1 className="font-serif text-3xl font-semibold text-foreground tracking-tight">{paper.title}</h1>
+            {paper.subtitle && (
+              <p className="mt-2 text-base text-muted-foreground">{paper.subtitle}</p>
+            )}
+            <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+              <span>{countryName}{cityName ? ` · ${cityName}` : ""}</span>
+              <span>·</span>
+              <span>{new Date(paper.created_at).toLocaleDateString()}</span>
+            </div>
+            {paper.description && (
+              <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">{paper.description}</p>
+            )}
+          </header>
+          <PdfViewer path={paper.pdf_path} url={paper.pdf_url} title={paper.title} />
+        </div>
+      ) : hasStructuredContent ? (
         <div className="space-y-10">
           <PaperHeader
             title={paper.title}
@@ -107,7 +126,6 @@ export default function CityPaperDetail() {
         </div>
       ) : (
         <>
-          {/* Legacy fallback: PDF or markdown */}
           <h1 className="font-serif text-3xl font-semibold text-foreground">{paper.title}</h1>
           <div className="mt-3 flex items-center gap-3 text-sm text-muted-foreground">
             <span>{countryName}{cityName ? ` · ${cityName}` : ""}</span>
@@ -115,12 +133,7 @@ export default function CityPaperDetail() {
             <span>{new Date(paper.created_at).toLocaleDateString()}</span>
           </div>
           {paper.description && <p className="mt-4 text-muted-foreground leading-relaxed">{paper.description}</p>}
-          {paper.pdf_url && (
-            <div className="mt-8">
-              <PdfViewer url={paper.pdf_url} title={paper.title} />
-            </div>
-          )}
-          {!paper.pdf_url && paper.content_markdown && (
+          {paper.content_markdown && (
             <div className="mt-8 prose prose-invert prose-sm max-w-none prose-headings:font-serif prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-a:text-primary">
               {paper.content_markdown.split("\n").map((line, i) => {
                 if (line.startsWith("### ")) return <h3 key={i}>{line.slice(4)}</h3>;
