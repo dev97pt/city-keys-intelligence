@@ -97,6 +97,7 @@ export type Database = {
           description: string | null
           id: string
           is_published: boolean
+          pdf_path: string | null
           pdf_url: string | null
           premium_only: boolean
           sections: Json | null
@@ -113,6 +114,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_published?: boolean
+          pdf_path?: string | null
           pdf_url?: string | null
           premium_only?: boolean
           sections?: Json | null
@@ -129,6 +131,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_published?: boolean
+          pdf_path?: string | null
           pdf_url?: string | null
           premium_only?: boolean
           sections?: Json | null
