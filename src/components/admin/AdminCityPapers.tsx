@@ -21,6 +21,7 @@ interface Paper {
   description: string | null;
   content_markdown: string | null;
   pdf_url: string | null;
+  pdf_path: string | null;
   thumbnail_url: string | null;
   country_id: string;
   city_id: string | null;
@@ -34,7 +35,8 @@ interface Country { id: string; name: string; }
 interface City { id: string; name: string; country_id: string; }
 
 const empty = {
-  title: "", subtitle: "", description: "", content_markdown: "", pdf_url: "", thumbnail_url: "",
+  title: "", subtitle: "", description: "", content_markdown: "",
+  pdf_url: "", pdf_path: "", thumbnail_url: "",
   country_id: "", city_id: "", is_published: false, premium_only: false,
 };
 
