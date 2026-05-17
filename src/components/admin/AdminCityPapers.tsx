@@ -358,17 +358,53 @@ export function AdminCityPapers() {
               )}
             </div>
 
-            {/* Section Builder */}
+            {/* PDF document (primary content) */}
             <div className="border-t border-border pt-4">
-              <SectionBuilder sections={sections} onChange={setSections} />
+              <Label>PDF Document</Label>
+              <p className="text-xs text-muted-foreground mt-1 mb-2">
+                Stored privately. Users view it through a secure embedded viewer.
+              </p>
+              {form.pdf_path || pdfFile ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary/30 px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Upload className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-xs text-foreground truncate">
+                      {pdfFile ? pdfFile.name : form.pdf_path}
+                    </span>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <label className="cursor-pointer text-xs text-primary hover:underline">
+                      Replace
+                      <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfSelect} />
+                    </label>
+                    <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={clearPdf}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 cursor-pointer hover:border-primary/50 transition-colors">
+                  <Upload className="h-6 w-6 text-muted-foreground mb-2" />
+                  <span className="text-xs text-muted-foreground">Click to upload PDF (max 50 MB)</span>
+                  <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfSelect} />
+                </label>
+              )}
             </div>
+
+            {/* Section Builder (optional structured layout) */}
+            <details className="border-t border-border pt-4">
+              <summary className="text-xs text-muted-foreground cursor-pointer">Optional: structured sections</summary>
+              <div className="mt-3">
+                <SectionBuilder sections={sections} onChange={setSections} />
+              </div>
+            </details>
 
             {/* Legacy fields (collapsed) */}
             <details className="border-t border-border pt-4">
-              <summary className="text-xs text-muted-foreground cursor-pointer">Legacy fields (PDF / Markdown)</summary>
+              <summary className="text-xs text-muted-foreground cursor-pointer">Legacy fields</summary>
               <div className="space-y-3 mt-3">
                 <div>
-                  <Label>PDF URL</Label>
+                  <Label>External PDF URL (legacy)</Label>
                   <Input value={form.pdf_url} onChange={e => setForm(f => ({ ...f, pdf_url: e.target.value }))} placeholder="https://..." />
                 </div>
                 <div>
