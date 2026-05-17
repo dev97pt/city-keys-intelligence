@@ -79,6 +79,7 @@ export function AdminCityPapers() {
     setSections(getDefaultSections());
     setThumbnailFile(null);
     setThumbnailPreview(null);
+    setPdfFile(null);
     setOpen(true);
   };
 
