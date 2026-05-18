@@ -1,6 +1,6 @@
-import * as pdfjsLib from "pdfjs-dist";
-// Use a CDN worker matching the installed version to avoid bundling complexity.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+// Legacy worker for broader browser compatibility (Safari, older Chromium).
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/legacy/build/pdf.worker.min.mjs`;
 
 export interface ExtractedPdfMeta {
   title: string;
