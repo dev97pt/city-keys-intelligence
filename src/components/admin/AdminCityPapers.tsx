@@ -4,104 +4,62 @@ import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Search, Eye, EyeOff, Upload, X } from "lucide-react";
-import { SectionBuilder } from "./SectionBuilder";
-import { PaperSection, getDefaultSections } from "@/types/cityPaperSections";
+import { Plus, Trash2, Search, Eye, EyeOff, Upload, X, Loader2, FileText } from "lucide-react";
+import { extractPdfMeta, ExtractedPdfMeta } from "@/lib/pdfExtract";
 
 interface Paper {
   id: string;
   title: string;
-  subtitle: string | null;
   description: string | null;
-  content_markdown: string | null;
-  pdf_url: string | null;
   pdf_path: string | null;
   thumbnail_url: string | null;
-  country_id: string;
-  city_id: string | null;
   is_published: boolean;
   premium_only: boolean;
-  sections: PaperSection[] | null;
   created_at: string;
 }
-
-interface Country { id: string; name: string; }
-interface City { id: string; name: string; country_id: string; }
-
-const empty = {
-  title: "", subtitle: "", description: "", content_markdown: "",
-  pdf_url: "", pdf_path: "", thumbnail_url: "",
-  country_id: "", city_id: "", is_published: false, premium_only: false,
-};
 
 export function AdminCityPapers() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [papers, setPapers] = useState<Paper[]>([]);
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [form, setForm] = useState(empty);
-  const [sections, setSections] = useState<PaperSection[]>([]);
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
 
-  const fetchAll = async () => {
-    const [{ data: p }, { data: co }, { data: ci }] = await Promise.all([
-      supabase.from("city_papers").select("*").order("created_at", { ascending: false }),
-      supabase.from("countries").select("id, name").order("name"),
-      supabase.from("cities").select("id, name, country_id").order("name"),
-    ]);
-    setPapers((p as unknown as Paper[]) || []);
-    setCountries(co || []);
-    setCities(ci || []);
+  // Upload flow state
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const [meta, setMeta] = useState<ExtractedPdfMeta | null>(null);
+  const [isPublished, setIsPublished] = useState(true);
+  const [premiumOnly, setPremiumOnly] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const fetchPapers = async () => {
+    const { data } = await supabase
+      .from("city_papers")
+      .select("id, title, description, pdf_path, thumbnail_url, is_published, premium_only, created_at")
+      .order("created_at", { ascending: false });
+    setPapers((data as Paper[]) || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchPapers(); }, []);
 
-  const filteredCities = cities.filter(c => c.country_id === form.country_id);
-
-  const openCreate = () => {
-    setEditing(null);
-    setForm(empty);
-    setSections(getDefaultSections());
-    setThumbnailFile(null);
-    setThumbnailPreview(null);
+  const resetForm = () => {
+    if (meta?.thumbnailUrl) URL.revokeObjectURL(meta.thumbnailUrl);
     setPdfFile(null);
-    setOpen(true);
+    setMeta(null);
+    setIsPublished(true);
+    setPremiumOnly(false);
   };
 
-  const openEdit = (p: Paper) => {
-    setEditing(p.id);
-    setForm({
-      title: p.title, subtitle: p.subtitle || "", description: p.description || "",
-      content_markdown: p.content_markdown || "", pdf_url: p.pdf_url || "",
-      pdf_path: p.pdf_path || "",
-      thumbnail_url: p.thumbnail_url || "", country_id: p.country_id,
-      city_id: p.city_id || "", is_published: p.is_published, premium_only: p.premium_only,
-    });
-    setSections(Array.isArray(p.sections) && p.sections.length > 0 ? p.sections : getDefaultSections());
-    setThumbnailFile(null);
-    setThumbnailPreview(p.thumbnail_url || null);
-    setPdfFile(null);
-    setOpen(true);
-  };
+  const openCreate = () => { resetForm(); setOpen(true); };
 
-  const handlePdfSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFile = async (file: File) => {
     if (file.type !== "application/pdf") {
       toast({ variant: "destructive", title: "PDF files only" });
       return;
@@ -111,128 +69,82 @@ export function AdminCityPapers() {
       return;
     }
     setPdfFile(file);
-  };
-
-  const uploadPdf = async (): Promise<string | null> => {
-    if (!pdfFile) return form.pdf_path || null;
-    const path = `${crypto.randomUUID()}.pdf`;
-    const { error } = await supabase.storage
-      .from("city-papers")
-      .upload(path, pdfFile, { contentType: "application/pdf", upsert: false });
-    if (error) throw error;
-    // Best-effort: remove previous file when replacing
-    if (form.pdf_path && form.pdf_path !== path) {
-      await supabase.storage.from("city-papers").remove([form.pdf_path]);
-    }
-    return path;
-  };
-
-  const clearPdf = async () => {
-    if (form.pdf_path) {
-      await supabase.storage.from("city-papers").remove([form.pdf_path]);
-    }
-    setPdfFile(null);
-    setForm(f => ({ ...f, pdf_path: "" }));
-  };
-
-  const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setThumbnailFile(file);
-    setThumbnailPreview(URL.createObjectURL(file));
-  };
-
-  const clearThumbnail = () => {
-    setThumbnailFile(null);
-    setThumbnailPreview(null);
-    setForm(f => ({ ...f, thumbnail_url: "" }));
-  };
-
-  const uploadThumbnail = async (): Promise<string | null> => {
-    if (!thumbnailFile) return form.thumbnail_url || null;
-    const ext = thumbnailFile.name.split(".").pop();
-    const path = `${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("city-paper-thumbnails").upload(path, thumbnailFile);
-    if (error) throw error;
-    const { data } = supabase.storage.from("city-paper-thumbnails").getPublicUrl(path);
-    return data.publicUrl;
-  };
-
-  const save = async () => {
-    if (!form.title || !form.country_id) {
-      toast({ variant: "destructive", title: "Title and country are required" });
-      return;
-    }
-    setUploading(true);
-    let thumbnailUrl = form.thumbnail_url || null;
-    let pdfPath = form.pdf_path || null;
+    setParsing(true);
     try {
-      thumbnailUrl = await uploadThumbnail();
-      pdfPath = await uploadPdf();
+      const m = await extractPdfMeta(file);
+      setMeta(m);
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Could not read PDF", description: err.message });
+      setPdfFile(null);
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    if (f) handleFile(f);
+  };
+
+  const create = async () => {
+    if (!pdfFile || !meta) return;
+    setSaving(true);
+    try {
+      const pdfPath = `${crypto.randomUUID()}.pdf`;
+      const { error: upErr } = await supabase.storage
+        .from("city-papers")
+        .upload(pdfPath, pdfFile, { contentType: "application/pdf" });
+      if (upErr) throw upErr;
+
+      const thumbName = `${crypto.randomUUID()}.jpg`;
+      const { error: thErr } = await supabase.storage
+        .from("city-paper-thumbnails")
+        .upload(thumbName, meta.thumbnailBlob, { contentType: "image/jpeg" });
+      if (thErr) throw thErr;
+      const { data: thUrl } = supabase.storage.from("city-paper-thumbnails").getPublicUrl(thumbName);
+
+      const { error: insErr } = await supabase.from("city_papers").insert({
+        title: meta.title,
+        description: meta.description || null,
+        pdf_path: pdfPath,
+        thumbnail_url: thUrl.publicUrl,
+        is_published: isPublished,
+        premium_only: premiumOnly,
+        created_by: user?.id,
+      } as any);
+      if (insErr) throw insErr;
+
+      toast({ title: "Paper published" });
+      setOpen(false);
+      resetForm();
+      fetchPapers();
     } catch (err: any) {
       toast({ variant: "destructive", title: "Upload failed", description: err.message });
-      setUploading(false);
-      return;
+    } finally {
+      setSaving(false);
     }
-    const payload: any = {
-      title: form.title,
-      subtitle: form.subtitle || null,
-      description: form.description || null,
-      content_markdown: form.content_markdown || null,
-      pdf_url: form.pdf_url || null,
-      pdf_path: pdfPath,
-      thumbnail_url: thumbnailUrl,
-      country_id: form.country_id,
-      city_id: form.city_id || null,
-      is_published: form.is_published,
-      premium_only: form.premium_only,
-      sections: sections,
-    };
-    let error;
-    if (editing) {
-      ({ error } = await supabase.from("city_papers").update(payload).eq("id", editing));
-    } else {
-      payload.created_by = user?.id;
-      ({ error } = await supabase.from("city_papers").insert(payload));
-    }
-    if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } else {
-      toast({ title: editing ? "Paper updated" : "Paper created" });
-      setOpen(false);
-      fetchAll();
-    }
-    setUploading(false);
   };
 
-  const deletePaper = async (id: string) => {
-    const paper = papers.find(p => p.id === id);
-    if (paper?.pdf_path) {
-      await supabase.storage.from("city-papers").remove([paper.pdf_path]);
-    }
-    const { error } = await supabase.from("city_papers").delete().eq("id", id);
+  const deletePaper = async (p: Paper) => {
+    if (p.pdf_path) await supabase.storage.from("city-papers").remove([p.pdf_path]);
+    const { error } = await supabase.from("city_papers").delete().eq("id", p.id);
     if (error) toast({ variant: "destructive", title: "Error", description: error.message });
-    else { toast({ title: "Paper deleted" }); fetchAll(); }
+    else { toast({ title: "Paper deleted" }); fetchPapers(); }
   };
 
   const togglePublish = async (id: string, current: boolean) => {
     await supabase.from("city_papers").update({ is_published: !current } as any).eq("id", id);
-    toast({ title: !current ? "Published" : "Unpublished" });
-    fetchAll();
+    fetchPapers();
   };
 
-  const countryName = (id: string) => countries.find(c => c.id === id)?.name || "—";
-  const cityName = (id: string | null) => id ? cities.find(c => c.id === id)?.name || "" : "";
-
-  const filtered = papers.filter(p => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return p.title.toLowerCase().includes(s) || countryName(p.country_id).toLowerCase().includes(s);
-  });
+  const filtered = papers.filter(p =>
+    !search || p.title.toLowerCase().includes(search.toLowerCase())
+  );
 
   if (loading) return (
     <div className="flex justify-center py-12">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
     </div>
   );
 
@@ -249,184 +161,108 @@ export function AdminCityPapers() {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-center text-sm text-muted-foreground py-12">No city papers found.</p>
+        <p className="text-center text-sm text-muted-foreground py-12">No city papers yet.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-secondary/30">
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Title</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Location</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Created</th>
-                <th className="px-4 py-3 w-40"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(p => (
-                <tr key={p.id} className="border-b border-border/50 hover:bg-card/50">
-                  <td className="px-4 py-3 font-medium text-foreground text-xs">{p.title}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {countryName(p.country_id)}{cityName(p.city_id) ? ` · ${cityName(p.city_id)}` : ""}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className={`text-[10px] ${p.is_published
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                      : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"}`}>
-                      {p.is_published ? "Published" : "Draft"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {new Date(p.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => togglePublish(p.id, p.is_published)}>
-                        {p.is_published ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEdit(p)}>
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => deletePaper(p.id)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map(p => (
+            <div key={p.id} className="group rounded-xl overflow-hidden border border-border bg-card hover:border-primary/40 transition-colors">
+              <div className="aspect-[4/3] bg-secondary overflow-hidden">
+                {p.thumbnail_url ? (
+                  <img src={p.thumbnail_url} alt={p.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <FileText className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              <div className="p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="text-sm font-medium text-foreground line-clamp-2 flex-1">{p.title}</h3>
+                  <Badge variant="outline" className={`text-[10px] shrink-0 ${p.is_published
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"}`}>
+                    {p.is_published ? "Live" : "Draft"}
+                  </Badge>
+                </div>
+                <div className="flex gap-1 pt-1">
+                  <Button variant="ghost" size="sm" className="h-7 text-xs flex-1" onClick={() => togglePublish(p.id, p.is_published)}>
+                    {p.is_published ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
+                    {p.is_published ? "Unpublish" : "Publish"}
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => deletePaper(p)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+        <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle className="font-serif">{editing ? "Edit Paper" : "New City Paper"}</DialogTitle>
+            <DialogTitle className="font-serif">New City Paper</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label>Title *</Label>
-                <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-              </div>
-              <div className="col-span-2">
-                <Label>Subtitle</Label>
-                <Input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))} placeholder="Short hook or question…" />
-              </div>
-              <div>
-                <Label>Country *</Label>
-                <Select value={form.country_id} onValueChange={v => setForm(f => ({ ...f, country_id: v, city_id: "" }))}>
-                  <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-                  <SelectContent>
-                    {countries.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>City</Label>
-                <Select value={form.city_id} onValueChange={v => setForm(f => ({ ...f, city_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
-                  <SelectContent>
-                    {filteredCities.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            <div>
-              <Label>Executive Summary</Label>
-              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="High-level overview…" />
-            </div>
+          <div className="space-y-5 mt-2">
+            {!meta && !parsing && (
+              <label
+                onDrop={onDrop}
+                onDragOver={(e) => e.preventDefault()}
+                className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border p-10 cursor-pointer hover:border-primary/50 hover:bg-secondary/30 transition-all"
+              >
+                <Upload className="h-10 w-10 text-primary/70 mb-3" />
+                <span className="text-sm text-foreground font-medium">Drop your PDF here</span>
+                <span className="text-xs text-muted-foreground mt-1">or click to browse · max 50 MB</span>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+                />
+              </label>
+            )}
 
-            {/* Thumbnail */}
-            <div>
-              <Label>Thumbnail</Label>
-              {(thumbnailPreview || form.thumbnail_url) ? (
-                <div className="relative mt-1 rounded-lg overflow-hidden border border-border aspect-video bg-secondary">
-                  <img src={thumbnailPreview || form.thumbnail_url} alt="Thumbnail" className="w-full h-full object-cover" />
-                  <Button type="button" variant="destructive" size="sm" className="absolute top-2 right-2 h-7 w-7 p-0" onClick={clearThumbnail}>
+            {parsing && (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-border p-10 gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">Reading document…</span>
+              </div>
+            )}
+
+            {meta && pdfFile && (
+              <>
+                <div className="flex gap-4 rounded-xl border border-border bg-secondary/30 p-3">
+                  <img src={meta.thumbnailUrl} alt="" className="h-32 w-24 object-cover rounded-md border border-border shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <p className="text-sm font-medium text-foreground line-clamp-2">{meta.title}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {meta.pageCount} pages · {(pdfFile.size / 1024 / 1024).toFixed(1)} MB
+                    </p>
+                    {meta.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-3 pt-1">{meta.description}</p>
+                    )}
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={resetForm}>
                     <X className="h-3 w-3" />
                   </Button>
                 </div>
-              ) : (
-                <label className="mt-1 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 cursor-pointer hover:border-primary/50 transition-colors">
-                  <Upload className="h-6 w-6 text-muted-foreground mb-2" />
-                  <span className="text-xs text-muted-foreground">Click to upload image</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailSelect} />
-                </label>
-              )}
-            </div>
 
-            {/* PDF document (primary content) */}
-            <div className="border-t border-border pt-4">
-              <Label>PDF Document</Label>
-              <p className="text-xs text-muted-foreground mt-1 mb-2">
-                Stored privately. Users view it through a secure embedded viewer.
-              </p>
-              {form.pdf_path || pdfFile ? (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary/30 px-3 py-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Upload className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-xs text-foreground truncate">
-                      {pdfFile ? pdfFile.name : form.pdf_path}
-                    </span>
-                  </div>
-                  <div className="flex gap-1 shrink-0">
-                    <label className="cursor-pointer text-xs text-primary hover:underline">
-                      Replace
-                      <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfSelect} />
-                    </label>
-                    <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={clearPdf}>
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="pub" className="text-sm">Published</Label>
+                  <Switch id="pub" checked={isPublished} onCheckedChange={setIsPublished} />
                 </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 cursor-pointer hover:border-primary/50 transition-colors">
-                  <Upload className="h-6 w-6 text-muted-foreground mb-2" />
-                  <span className="text-xs text-muted-foreground">Click to upload PDF (max 50 MB)</span>
-                  <input type="file" accept="application/pdf" className="hidden" onChange={handlePdfSelect} />
-                </label>
-              )}
-            </div>
-
-            {/* Section Builder (optional structured layout) */}
-            <details className="border-t border-border pt-4">
-              <summary className="text-xs text-muted-foreground cursor-pointer">Optional: structured sections</summary>
-              <div className="mt-3">
-                <SectionBuilder sections={sections} onChange={setSections} />
-              </div>
-            </details>
-
-            {/* Legacy fields (collapsed) */}
-            <details className="border-t border-border pt-4">
-              <summary className="text-xs text-muted-foreground cursor-pointer">Legacy fields</summary>
-              <div className="space-y-3 mt-3">
-                <div>
-                  <Label>External PDF URL (legacy)</Label>
-                  <Input value={form.pdf_url} onChange={e => setForm(f => ({ ...f, pdf_url: e.target.value }))} placeholder="https://..." />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="prem" className="text-sm">Premium Only</Label>
+                  <Switch id="prem" checked={premiumOnly} onCheckedChange={setPremiumOnly} />
                 </div>
-                <div>
-                  <Label>Content (Markdown)</Label>
-                  <Textarea value={form.content_markdown} onChange={e => setForm(f => ({ ...f, content_markdown: e.target.value }))} rows={6} className="font-mono text-xs" />
-                </div>
-              </div>
-            </details>
 
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Switch checked={form.is_published} onCheckedChange={v => setForm(f => ({ ...f, is_published: v }))} />
-                <Label>Published</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={form.premium_only} onCheckedChange={v => setForm(f => ({ ...f, premium_only: v }))} />
-                <Label>Premium Only</Label>
-              </div>
-            </div>
-            <Button onClick={save} className="w-full" disabled={uploading}>
-              {uploading ? "Saving…" : editing ? "Save Changes" : "Create Paper"}
-            </Button>
+                <Button onClick={create} className="w-full" disabled={saving}>
+                  {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Publishing…</> : "Create Paper"}
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

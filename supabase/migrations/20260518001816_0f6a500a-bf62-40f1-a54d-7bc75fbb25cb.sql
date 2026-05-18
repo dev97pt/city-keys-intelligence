@@ -1,0 +1,1 @@
+ALTER TABLE public.city_papers ALTER COLUMN country_id DROP NOT NULL;
