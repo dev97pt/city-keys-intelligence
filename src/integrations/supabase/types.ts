@@ -91,7 +91,7 @@ export type Database = {
         Row: {
           city_id: string | null
           content_markdown: string | null
-          country_id: string
+          country_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -108,7 +108,7 @@ export type Database = {
         Insert: {
           city_id?: string | null
           content_markdown?: string | null
-          country_id: string
+          country_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -125,7 +125,7 @@ export type Database = {
         Update: {
           city_id?: string | null
           content_markdown?: string | null
-          country_id?: string
+          country_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
