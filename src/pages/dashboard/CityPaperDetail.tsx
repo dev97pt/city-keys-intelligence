@@ -11,6 +11,7 @@ interface PaperDetail {
   description: string | null;
   content_markdown: string | null;
   pdf_url: string | null;
+  pdf_path: string | null;
   thumbnail_url: string | null;
   created_at: string;
   country_id: string;
@@ -80,13 +81,13 @@ export default function CityPaperDetail() {
         <p className="mt-4 text-muted-foreground leading-relaxed">{paper.description}</p>
       )}
 
-      {paper.pdf_url && (
+      {(paper.pdf_url || paper.pdf_path) && (
         <div className="mt-8">
-          <PdfViewer url={paper.pdf_url} title={paper.title} />
+          <PdfViewer url={paper.pdf_url} path={paper.pdf_path} title={paper.title} />
         </div>
       )}
 
-      {!paper.pdf_url && paper.content_markdown && (
+      {!paper.pdf_url && !paper.pdf_path && paper.content_markdown && (
         <div className="mt-8 prose prose-invert prose-sm max-w-none
           prose-headings:font-serif prose-headings:text-foreground
           prose-p:text-muted-foreground prose-strong:text-foreground
