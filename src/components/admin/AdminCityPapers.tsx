@@ -38,6 +38,11 @@ export function AdminCityPapers() {
   const [premiumOnly, setPremiumOnly] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Dictionary of known locations (city + country names) loaded once and
+  // passed to the PDF extractor so we can detect locations accurately from
+  // the document's first page text.
+  const [locationDict, setLocationDict] = useState<string[]>([]);
+
   const fetchPapers = async () => {
     const { data } = await supabase
       .from("city_papers")
@@ -47,7 +52,20 @@ export function AdminCityPapers() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchPapers(); }, []);
+  const fetchLocationDictionary = async () => {
+    const [{ data: cities }, { data: countries }] = await Promise.all([
+      supabase.from("cities").select("name"),
+      supabase.from("countries").select("name"),
+    ]);
+    const names = [
+      ...(cities || []).map((c: any) => c.name),
+      ...(countries || []).map((c: any) => c.name),
+    ].filter(Boolean);
+    setLocationDict(names);
+  };
+
+  useEffect(() => { fetchPapers(); fetchLocationDictionary(); }, []);
+
 
   const resetForm = () => {
     if (meta?.thumbnailUrl) URL.revokeObjectURL(meta.thumbnailUrl);
@@ -71,8 +89,9 @@ export function AdminCityPapers() {
     setPdfFile(file);
     setParsing(true);
     try {
-      const m = await extractPdfMeta(file);
+      const m = await extractPdfMeta(file, { locationDictionary: locationDict });
       setMeta(m);
+
     } catch (err: any) {
       toast({ variant: "destructive", title: "Could not read PDF", description: err.message });
       setPdfFile(null);
@@ -112,7 +131,11 @@ export function AdminCityPapers() {
         is_published: isPublished,
         premium_only: premiumOnly,
         created_by: user?.id,
+        // Use the PDF's own publication date if we extracted one — so the
+        // displayed date reflects the document, not the upload time.
+        ...(meta.publicationDate ? { created_at: meta.publicationDate } : {}),
       } as any);
+
       if (insErr) throw insErr;
 
       toast({ title: "Paper published" });
@@ -239,7 +262,10 @@ export function AdminCityPapers() {
                     <p className="text-sm font-medium text-foreground line-clamp-2">{meta.title}</p>
                     <p className="text-[11px] text-muted-foreground">
                       {meta.pageCount} pages · {(pdfFile.size / 1024 / 1024).toFixed(1)} MB
+                      {meta.detectedLocation ? ` · ${meta.detectedLocation}` : ""}
+                      {meta.publicationDate ? ` · ${new Date(meta.publicationDate).toLocaleDateString()}` : ""}
                     </p>
+
                     {meta.description && (
                       <p className="text-xs text-muted-foreground line-clamp-3 pt-1">{meta.description}</p>
                     )}
