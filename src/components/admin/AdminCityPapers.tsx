@@ -262,7 +262,10 @@ export function AdminCityPapers() {
                     <p className="text-sm font-medium text-foreground line-clamp-2">{meta.title}</p>
                     <p className="text-[11px] text-muted-foreground">
                       {meta.pageCount} pages · {(pdfFile.size / 1024 / 1024).toFixed(1)} MB
+                      {meta.detectedLocation ? ` · ${meta.detectedLocation}` : ""}
+                      {meta.publicationDate ? ` · ${new Date(meta.publicationDate).toLocaleDateString()}` : ""}
                     </p>
+
                     {meta.description && (
                       <p className="text-xs text-muted-foreground line-clamp-3 pt-1">{meta.description}</p>
                     )}
