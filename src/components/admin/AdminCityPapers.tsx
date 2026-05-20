@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
@@ -8,8 +8,14 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Trash2, Search, Eye, EyeOff, Upload, X, Loader2, FileText } from "lucide-react";
-import { extractPdfMeta, ExtractedPdfMeta } from "@/lib/pdfExtract";
 
 interface Paper {
   id: string;
@@ -22,6 +28,9 @@ interface Paper {
   created_at: string;
 }
 
+interface Country { id: string; name: string }
+interface City { id: string; name: string; country_id: string }
+
 export function AdminCityPapers() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -32,16 +41,18 @@ export function AdminCityPapers() {
 
   // Upload flow state
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [parsing, setParsing] = useState(false);
-  const [meta, setMeta] = useState<ExtractedPdfMeta | null>(null);
+  const [title, setTitle] = useState("");
+  const [countryId, setCountryId] = useState<string>("");
+  const [cityId, setCityId] = useState<string>("");
+  const [publicationDate, setPublicationDate] = useState<string>(
+    new Date().toISOString().slice(0, 10),
+  );
   const [isPublished, setIsPublished] = useState(true);
   const [premiumOnly, setPremiumOnly] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Dictionary of known locations (city + country names) loaded once and
-  // passed to the PDF extractor so we can detect locations accurately from
-  // the document's first page text.
-  const [locationDict, setLocationDict] = useState<string[]>([]);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
 
   const fetchPapers = async () => {
     const { data } = await supabase
@@ -52,32 +63,35 @@ export function AdminCityPapers() {
     setLoading(false);
   };
 
-  const fetchLocationDictionary = async () => {
-    const [{ data: cities }, { data: countries }] = await Promise.all([
-      supabase.from("cities").select("name"),
-      supabase.from("countries").select("name"),
+  const fetchLocations = async () => {
+    const [{ data: cs }, { data: cts }] = await Promise.all([
+      supabase.from("countries").select("id, name").order("name"),
+      supabase.from("cities").select("id, name, country_id").order("name"),
     ]);
-    const names = [
-      ...(cities || []).map((c: any) => c.name),
-      ...(countries || []).map((c: any) => c.name),
-    ].filter(Boolean);
-    setLocationDict(names);
+    setCountries((cs as Country[]) || []);
+    setCities((cts as City[]) || []);
   };
 
-  useEffect(() => { fetchPapers(); fetchLocationDictionary(); }, []);
+  useEffect(() => { fetchPapers(); fetchLocations(); }, []);
 
+  const filteredCities = useMemo(
+    () => cities.filter((c) => !countryId || c.country_id === countryId),
+    [cities, countryId],
+  );
 
   const resetForm = () => {
-    if (meta?.thumbnailUrl) URL.revokeObjectURL(meta.thumbnailUrl);
     setPdfFile(null);
-    setMeta(null);
+    setTitle("");
+    setCountryId("");
+    setCityId("");
+    setPublicationDate(new Date().toISOString().slice(0, 10));
     setIsPublished(true);
     setPremiumOnly(false);
   };
 
   const openCreate = () => { resetForm(); setOpen(true); };
 
-  const handleFile = async (file: File) => {
+  const handleFile = (file: File) => {
     if (file.type !== "application/pdf") {
       toast({ variant: "destructive", title: "PDF files only" });
       return;
@@ -87,16 +101,9 @@ export function AdminCityPapers() {
       return;
     }
     setPdfFile(file);
-    setParsing(true);
-    try {
-      const m = await extractPdfMeta(file, { locationDictionary: locationDict });
-      setMeta(m);
-
-    } catch (err: any) {
-      toast({ variant: "destructive", title: "Could not read PDF", description: err.message });
-      setPdfFile(null);
-    } finally {
-      setParsing(false);
+    if (!title) {
+      // Pre-fill title from filename (without extension) as a friendly default.
+      setTitle(file.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").trim());
     }
   };
 
@@ -107,7 +114,14 @@ export function AdminCityPapers() {
   };
 
   const create = async () => {
-    if (!pdfFile || !meta) return;
+    if (!pdfFile) {
+      toast({ variant: "destructive", title: "Please upload a PDF" });
+      return;
+    }
+    if (!title.trim()) {
+      toast({ variant: "destructive", title: "Please enter a title" });
+      return;
+    }
     setSaving(true);
     try {
       const pdfPath = `${crypto.randomUUID()}.pdf`;
@@ -116,24 +130,15 @@ export function AdminCityPapers() {
         .upload(pdfPath, pdfFile, { contentType: "application/pdf" });
       if (upErr) throw upErr;
 
-      const thumbName = `${crypto.randomUUID()}.jpg`;
-      const { error: thErr } = await supabase.storage
-        .from("city-paper-thumbnails")
-        .upload(thumbName, meta.thumbnailBlob, { contentType: "image/jpeg" });
-      if (thErr) throw thErr;
-      const { data: thUrl } = supabase.storage.from("city-paper-thumbnails").getPublicUrl(thumbName);
-
       const { error: insErr } = await supabase.from("city_papers").insert({
-        title: meta.title,
-        description: meta.description || null,
+        title: title.trim(),
         pdf_path: pdfPath,
-        thumbnail_url: thUrl.publicUrl,
         is_published: isPublished,
         premium_only: premiumOnly,
         created_by: user?.id,
-        // Use the PDF's own publication date if we extracted one — so the
-        // displayed date reflects the document, not the upload time.
-        ...(meta.publicationDate ? { created_at: meta.publicationDate } : {}),
+        country_id: countryId || null,
+        city_id: cityId || null,
+        created_at: new Date(publicationDate).toISOString(),
       } as any);
 
       if (insErr) throw insErr;
@@ -229,7 +234,7 @@ export function AdminCityPapers() {
           </DialogHeader>
 
           <div className="space-y-5 mt-2">
-            {!meta && !parsing && (
+            {!pdfFile ? (
               <label
                 onDrop={onDrop}
                 onDragOver={(e) => e.preventDefault()}
@@ -245,50 +250,62 @@ export function AdminCityPapers() {
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
                 />
               </label>
-            )}
-
-            {parsing && (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-border p-10 gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground">Reading document…</span>
+            ) : (
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/30 p-3">
+                <FileText className="h-8 w-8 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{pdfFile.name}</p>
+                  <p className="text-[11px] text-muted-foreground">{(pdfFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                </div>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={() => setPdfFile(null)}>
+                  <X className="h-3 w-3" />
+                </Button>
               </div>
             )}
 
-            {meta && pdfFile && (
-              <>
-                <div className="flex gap-4 rounded-xl border border-border bg-secondary/30 p-3">
-                  <img src={meta.thumbnailUrl} alt="" className="h-32 w-24 object-cover rounded-md border border-border shrink-0" />
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <p className="text-sm font-medium text-foreground line-clamp-2">{meta.title}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {meta.pageCount} pages · {(pdfFile.size / 1024 / 1024).toFixed(1)} MB
-                      {meta.detectedLocation ? ` · ${meta.detectedLocation}` : ""}
-                      {meta.publicationDate ? ` · ${new Date(meta.publicationDate).toLocaleDateString()}` : ""}
-                    </p>
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-sm">Title</Label>
+              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Marvila Deep Dive" />
+            </div>
 
-                    {meta.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-3 pt-1">{meta.description}</p>
-                    )}
-                  </div>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={resetForm}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm">Country</Label>
+                <Select value={countryId} onValueChange={(v) => { setCountryId(v); setCityId(""); }}>
+                  <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+                  <SelectContent>
+                    {countries.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">City</Label>
+                <Select value={cityId} onValueChange={setCityId} disabled={!countryId}>
+                  <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
+                  <SelectContent>
+                    {filteredCities.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="pub" className="text-sm">Published</Label>
-                  <Switch id="pub" checked={isPublished} onCheckedChange={setIsPublished} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="prem" className="text-sm">Premium Only</Label>
-                  <Switch id="prem" checked={premiumOnly} onCheckedChange={setPremiumOnly} />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="date" className="text-sm">Publication Date</Label>
+              <Input id="date" type="date" value={publicationDate} onChange={(e) => setPublicationDate(e.target.value)} />
+            </div>
 
-                <Button onClick={create} className="w-full" disabled={saving}>
-                  {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Publishing…</> : "Create Paper"}
-                </Button>
-              </>
-            )}
+            <div className="flex items-center justify-between">
+              <Label htmlFor="pub" className="text-sm">Published</Label>
+              <Switch id="pub" checked={isPublished} onCheckedChange={setIsPublished} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="prem" className="text-sm">Premium Only</Label>
+              <Switch id="prem" checked={premiumOnly} onCheckedChange={setPremiumOnly} />
+            </div>
+
+            <Button onClick={create} className="w-full" disabled={saving || !pdfFile}>
+              {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Publishing…</> : "Create Paper"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
