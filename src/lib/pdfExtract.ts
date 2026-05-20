@@ -1,6 +1,9 @@
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-// Legacy worker for broader browser compatibility (Safari, older Chromium).
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/legacy/build/pdf.worker.min.mjs`;
+// Bundle the worker via Vite so the version always matches the library and
+// avoids CDN/CORS issues. The `?url` suffix returns the asset URL string.
+// eslint-disable-next-line import/no-unresolved
+import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 export interface ExtractedPdfMeta {
   title: string;
