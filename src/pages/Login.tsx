@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { getDashboardRedirectPath, getUserAccess } from "@/hooks/useUserAccess";
-
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,8 +23,10 @@ export default function Login() {
     }
 
     if (data.user) {
-      const access = await getUserAccess(data.user.id);
-      navigate(getDashboardRedirectPath(access), { replace: true });
+      // Let ProtectedRoute resolve the correct destination once the session
+      // has fully propagated. Avoids a race where RLS-protected role/profile
+      // queries return empty before the auth token is attached.
+      navigate("/dashboard", { replace: true });
     }
   };
 
