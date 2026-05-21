@@ -212,8 +212,8 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
       onCopy={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
-      className={`relative w-full rounded-2xl overflow-hidden border border-border bg-gradient-to-b from-card to-background shadow-2xl shadow-primary/5 select-none ${
-        isFullscreen ? "h-screen rounded-none" : "h-[85vh]"
+      className={`relative w-full overflow-hidden bg-neutral-900 select-none ${
+        isFullscreen ? "h-screen" : "h-[calc(100vh-10rem)] rounded-xl border border-border"
       }`}
       style={{ WebkitUserSelect: "none", userSelect: "none" }}
     >
