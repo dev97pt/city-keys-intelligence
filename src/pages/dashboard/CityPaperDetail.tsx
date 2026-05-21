@@ -64,25 +64,27 @@ export default function CityPaperDetail() {
   );
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <Button variant="ghost" size="sm" className="mb-6 text-muted-foreground" onClick={() => navigate("/dashboard/city-papers")}>
-        <ArrowLeft className="h-4 w-4 mr-1" /> Back to Papers
-      </Button>
+    <div className="w-full">
+      <div className="mx-auto max-w-6xl">
+        <Button variant="ghost" size="sm" className="mb-6 text-muted-foreground" onClick={() => navigate("/dashboard/city-papers")}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to Papers
+        </Button>
 
-      <h1 className="font-serif text-3xl font-semibold text-foreground">{paper.title}</h1>
+        <h1 className="font-serif text-3xl font-semibold text-foreground">{paper.title}</h1>
 
-      <div className="mt-3 flex items-center gap-3 text-sm text-muted-foreground">
-        <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {countryName}{cityName ? ` · ${cityName}` : ""}</span>
-        <span>·</span>
-        <span>{new Date(paper.created_at).toLocaleDateString()}</span>
+        <div className="mt-3 flex items-center gap-3 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {countryName}{cityName ? ` · ${cityName}` : ""}</span>
+          <span>·</span>
+          <span>{new Date(paper.created_at).toLocaleDateString()}</span>
+        </div>
+
+        {paper.description && (
+          <p className="mt-4 text-muted-foreground leading-relaxed">{paper.description}</p>
+        )}
       </div>
 
-      {paper.description && (
-        <p className="mt-4 text-muted-foreground leading-relaxed">{paper.description}</p>
-      )}
-
       {(paper.pdf_url || paper.pdf_path) && (
-        <div className="mt-8">
+        <div className="mt-8 -mx-4 sm:-mx-6 lg:-mx-10">
           <PdfViewer url={paper.pdf_url} path={paper.pdf_path} title={paper.title} />
         </div>
       )}

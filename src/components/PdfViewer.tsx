@@ -212,8 +212,8 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
       onCopy={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
-      className={`relative w-full rounded-2xl overflow-hidden border border-border bg-gradient-to-b from-card to-background shadow-2xl shadow-primary/5 select-none ${
-        isFullscreen ? "h-screen rounded-none" : "h-[85vh]"
+      className={`relative w-full overflow-hidden bg-neutral-900 select-none ${
+        isFullscreen ? "h-screen" : "h-[calc(100vh-10rem)] rounded-xl border border-border"
       }`}
       style={{ WebkitUserSelect: "none", userSelect: "none" }}
     >
@@ -266,26 +266,27 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
       {/* Pages scroller */}
       <div
         ref={scrollerRef}
-        className="absolute inset-0 overflow-y-auto pt-12 pb-6 px-4 sm:px-8"
+        className="absolute inset-0 overflow-y-auto pt-12 pb-8 px-2 sm:px-6"
         style={{ scrollbarWidth: "thin" }}
       >
-        <div className="mx-auto flex max-w-4xl flex-col gap-6">
+        <div className="mx-auto flex max-w-5xl flex-col gap-4">
           {Array.from({ length: pageCount }).map((_, i) => (
             <div
               key={i}
               data-page={i + 1}
               ref={(el) => (pageRefs.current[i] = el)}
-              className="relative mx-auto w-full rounded-md bg-white shadow-lg shadow-black/20 overflow-hidden"
-              style={{ minHeight: "60vh" }}
+              className="relative mx-auto w-full bg-white shadow-2xl shadow-black/40 overflow-hidden"
+              style={{ minHeight: "80vh" }}
             >
               {/* Placeholder shimmer until the canvas mounts */}
-              <div className="absolute inset-0 flex items-center justify-center bg-secondary/20">
+              <div className="absolute inset-0 flex items-center justify-center bg-neutral-100">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
               </div>
             </div>
           ))}
         </div>
       </div>
+
 
       {/* Watermark (deters screen capture, kept subtle) */}
       <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center">
