@@ -9,22 +9,14 @@ import { Button } from "@/components/ui/button";
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 interface PdfViewerProps {
-  /** Storage path inside the private `city-papers` bucket (preferred). */
   path?: string | null;
-  /** Fallback: external/legacy URL. */
   url?: string | null;
   title: string;
 }
 
 const SIGNED_URL_TTL = 60 * 30;
+const READING_WIDTH = 900; // natural readable width in CSS px at zoom=1
 
-/**
- * Premium custom PDF viewer.
- * - Renders pages to <canvas> via pdf.js (no text layer → no text selection / copy).
- * - Pulls the PDF through a private signed URL.
- * - Disables right-click, drag, copy, save / print shortcuts.
- * - Hides all browser-native PDF chrome.
- */
 export default function PdfViewer({ path, url, title }: PdfViewerProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
@@ -34,13 +26,15 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [toolbarVisible, setToolbarVisible] = useState(true);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
   const renderedPages = useRef<Set<number>>(new Set());
+  const renderTaskRef = useRef<Map<number, any>>(new Map());
 
-  // --- Resolve signed URL --------------------------------------------------
+  // Resolve signed URL
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -70,12 +64,10 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [path, url]);
 
-  // --- Load PDF document ---------------------------------------------------
+  // Load PDF
   useEffect(() => {
     if (!signedUrl) return;
     let cancelled = false;
@@ -94,12 +86,10 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
         }
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [signedUrl]);
 
-  // --- Render a single page to its canvas ----------------------------------
+  // Render a single page – sized to the available reading width
   const renderPage = useCallback(
     async (pageNum: number) => {
       if (!pdfDoc || renderedPages.current.has(pageNum)) return;
@@ -113,9 +103,13 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
       try {
         const page = await pdfDoc.getPage(pageNum);
         const dpr = window.devicePixelRatio || 1;
-        const containerWidth = container.clientWidth;
         const base = page.getViewport({ scale: 1 });
-        const cssScale = (containerWidth / base.width) * zoom;
+
+        // Use the scroller's actual width (minus padding) capped at READING_WIDTH
+        const scrollerW = scrollerRef.current?.clientWidth ?? window.innerWidth;
+        const available = Math.min(scrollerW - 32, READING_WIDTH * 1.4);
+        const cssWidth = Math.min(available, READING_WIDTH) * zoom;
+        const cssScale = cssWidth / base.width;
         const renderScale = cssScale * dpr;
         const viewport = page.getViewport({ scale: renderScale });
 
@@ -124,9 +118,16 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
         canvas.height = viewport.height;
         canvas.style.width = `${base.width * cssScale}px`;
         canvas.style.height = `${base.height * cssScale}px`;
-        canvas.className = "block max-w-full mx-auto select-none pointer-events-none";
+        canvas.className = "block select-none pointer-events-none";
         const ctx = canvas.getContext("2d")!;
-        await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+
+        // set container to natural page height so layout doesn't jump
+        container.style.height = `${base.height * cssScale}px`;
+        container.style.width = `${base.width * cssScale}px`;
+
+        const task = page.render({ canvasContext: ctx, viewport, canvas } as any);
+        renderTaskRef.current.set(pageNum, task);
+        await task.promise;
 
         container.innerHTML = "";
         container.appendChild(canvas);
@@ -137,15 +138,21 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
     [pdfDoc, zoom]
   );
 
-  // --- Re-render all visible pages when zoom changes -----------------------
+  // Re-render on zoom
   useEffect(() => {
     renderedPages.current = new Set();
     if (!pdfDoc) return;
-    // Render first page immediately for snappy zoom feedback.
-    renderPage(1);
+    // Re-render currently visible pages
+    pageRefs.current.forEach((el, idx) => {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.bottom > 0 && rect.top < window.innerHeight + 600) {
+        renderPage(idx + 1);
+      }
+    });
   }, [zoom, pdfDoc, renderPage]);
 
-  // --- Lazy-load pages via IntersectionObserver ----------------------------
+  // Lazy load
   useEffect(() => {
     if (!pdfDoc || !scrollerRef.current) return;
     const root = scrollerRef.current;
@@ -155,18 +162,17 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
           const pageNum = Number((entry.target as HTMLElement).dataset.page);
           if (entry.isIntersecting) {
             renderPage(pageNum);
-            // Track current page for indicator.
             if (entry.intersectionRatio > 0.5) setCurrentPage(pageNum);
           }
         }
       },
-      { root, rootMargin: "400px 0px", threshold: [0, 0.5, 1] }
+      { root, rootMargin: "600px 0px", threshold: [0, 0.5, 1] }
     );
     pageRefs.current.forEach((el) => el && observer.observe(el));
     return () => observer.disconnect();
   }, [pdfDoc, renderPage]);
 
-  // --- Disable save / print / copy shortcuts -------------------------------
+  // Disable shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
@@ -178,7 +184,6 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // --- Navigation ----------------------------------------------------------
   const scrollToPage = (pageNum: number) => {
     const el = pageRefs.current[pageNum - 1];
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -194,10 +199,9 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
     }
   };
 
-  // --- Error state ---------------------------------------------------------
   if (error) {
     return (
-      <div className="flex h-[60vh] flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-card text-center">
+      <div className="flex h-[60vh] flex-col items-center justify-center gap-3 text-center">
         <FileWarning className="h-10 w-10 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">{error}</p>
       </div>
@@ -212,91 +216,75 @@ export default function PdfViewer({ path, url, title }: PdfViewerProps) {
       onCopy={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
-      className={`relative w-full overflow-hidden bg-neutral-900 select-none ${
-        isFullscreen ? "h-screen" : "h-[calc(100vh-10rem)] rounded-xl border border-border"
-      }`}
+      onMouseMove={() => setToolbarVisible(true)}
+      className="relative w-full bg-neutral-900 select-none"
       style={{ WebkitUserSelect: "none", userSelect: "none" }}
     >
-      {/* Top toolbar (custom, not browser) */}
-      <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between gap-3 border-b border-border/50 bg-card/80 px-4 py-2 backdrop-blur-md">
-        <div className="text-xs text-muted-foreground font-medium truncate max-w-[40%]">{title}</div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => scrollToPage(Math.max(1, currentPage - 1))} disabled={currentPage <= 1}>
-            <ChevronUp className="h-3.5 w-3.5" />
-          </Button>
-          <span className="text-xs text-muted-foreground tabular-nums px-1 min-w-[60px] text-center">
-            {currentPage} / {pageCount || "—"}
-          </span>
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => scrollToPage(Math.min(pageCount, currentPage + 1))} disabled={currentPage >= pageCount}>
-            <ChevronDown className="h-3.5 w-3.5" />
-          </Button>
-          <div className="mx-2 h-4 w-px bg-border" />
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setZoom((z) => Math.max(0.5, z - 0.15))}>
-            <ZoomOut className="h-3.5 w-3.5" />
-          </Button>
-          <span className="text-[10px] text-muted-foreground tabular-nums min-w-[36px] text-center">{Math.round(zoom * 100)}%</span>
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setZoom((z) => Math.min(2.5, z + 0.15))}>
-            <ZoomIn className="h-3.5 w-3.5" />
-          </Button>
-          <div className="mx-2 h-4 w-px bg-border" />
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={toggleFullscreen}>
-            {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-          </Button>
-        </div>
+      {/* Floating toolbar */}
+      <div
+        className={`fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 rounded-full border border-white/10 bg-black/70 backdrop-blur-md px-3 py-2 shadow-2xl transition-all duration-300 ${
+          toolbarVisible ? "opacity-100 bottom-6" : "opacity-0 bottom-2 pointer-events-none"
+        }`}
+      >
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/80 hover:text-white hover:bg-white/10" onClick={() => scrollToPage(Math.max(1, currentPage - 1))} disabled={currentPage <= 1}>
+          <ChevronUp className="h-4 w-4" />
+        </Button>
+        <span className="text-xs text-white/80 tabular-nums px-2 min-w-[64px] text-center">
+          {currentPage} / {pageCount || "—"}
+        </span>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/80 hover:text-white hover:bg-white/10" onClick={() => scrollToPage(Math.min(pageCount, currentPage + 1))} disabled={currentPage >= pageCount}>
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+        <div className="mx-1 h-5 w-px bg-white/15" />
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/80 hover:text-white hover:bg-white/10" onClick={() => setZoom((z) => Math.max(0.5, z - 0.15))}>
+          <ZoomOut className="h-4 w-4" />
+        </Button>
+        <span className="text-[11px] text-white/70 tabular-nums min-w-[40px] text-center">{Math.round(zoom * 100)}%</span>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/80 hover:text-white hover:bg-white/10" onClick={() => setZoom((z) => Math.min(2.5, z + 0.15))}>
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+        <div className="mx-1 h-5 w-px bg-white/15" />
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/80 hover:text-white hover:bg-white/10" onClick={toggleFullscreen}>
+          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </Button>
       </div>
 
-      {/* Loading state */}
+      {/* Loading */}
       {loading && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-card">
+        <div className="flex flex-col items-center justify-center gap-4 py-32">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <span className="text-sm text-muted-foreground">Preparing document…</span>
-          {/* Skeleton pages */}
-          <div className="mt-6 flex flex-col gap-3">
-            {[0, 1].map((i) => (
-              <div
-                key={i}
-                className="h-32 w-56 rounded-md border border-border bg-secondary/40 animate-pulse"
-                style={{ animationDelay: `${i * 150}ms` }}
-              />
-            ))}
-          </div>
         </div>
       )}
 
-      {/* Pages scroller */}
+      {/* Pages */}
       <div
         ref={scrollerRef}
-        className="absolute inset-0 overflow-y-auto pt-12 pb-8 px-2 sm:px-6"
-        style={{ scrollbarWidth: "thin" }}
+        className={`w-full ${isFullscreen ? "h-screen overflow-y-auto" : ""} py-8 px-4`}
       >
-        <div className="mx-auto flex max-w-5xl flex-col gap-4">
+        <div className="mx-auto flex flex-col items-center gap-6">
           {Array.from({ length: pageCount }).map((_, i) => (
             <div
               key={i}
               data-page={i + 1}
               ref={(el) => (pageRefs.current[i] = el)}
-              className="relative mx-auto w-full bg-white shadow-2xl shadow-black/40 overflow-hidden"
-              style={{ minHeight: "80vh" }}
+              className="relative bg-white shadow-2xl shadow-black/50"
+              style={{ width: "min(900px, 100%)", aspectRatio: "1 / 1.414" }}
             >
-              {/* Placeholder shimmer until the canvas mounts */}
-              <div className="absolute inset-0 flex items-center justify-center bg-neutral-100">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/50" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
               </div>
             </div>
           ))}
         </div>
       </div>
 
-
-      {/* Watermark (deters screen capture, kept subtle) */}
-      <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center">
-        <span className="rotate-[-30deg] select-none text-[5rem] font-serif font-semibold text-foreground/[0.03]">
+      {/* Watermark */}
+      <div className="pointer-events-none fixed inset-0 z-[5] flex items-center justify-center">
+        <span className="rotate-[-30deg] select-none text-[6rem] font-serif font-semibold text-white/[0.025]">
           {title}
         </span>
       </div>
-
-      {/* Invisible top-right strip = extra insurance against any leftover browser controls */}
-      <div className="pointer-events-auto absolute right-0 top-12 z-10 h-12 w-40 bg-transparent" />
     </div>
   );
 }
