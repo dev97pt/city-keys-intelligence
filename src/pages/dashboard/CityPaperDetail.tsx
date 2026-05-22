@@ -84,7 +84,7 @@ export default function CityPaperDetail() {
       </div>
 
       {(paper.pdf_url || paper.pdf_path) && (
-        <div className="mt-8 -mx-4 sm:-mx-6 lg:-mx-10">
+        <div className="mt-10 -mx-4 sm:-mx-6 lg:-mx-12 xl:-mx-20">
           <PdfViewer url={paper.pdf_url} path={paper.pdf_path} title={paper.title} />
         </div>
       )}
