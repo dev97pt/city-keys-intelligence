@@ -372,15 +372,51 @@ export default function Community() {
         ) : (
           posts.map((post) => {
             const liked = post.likes.some((l) => l.user_id === user?.id);
+            const isPostOwner = post.user_id === user?.id;
+            const postEdited =
+              post.updated_at &&
+              new Date(post.updated_at).getTime() - new Date(post.created_at).getTime() > 1500;
             return (
               <div key={post.id} className="rounded-lg border border-border bg-card p-6">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">{post.profiles?.full_name || "Anonymous"}</span>
-                  <span>·</span>
-                  <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">{post.profiles?.full_name || "Anonymous"}</span>
+                    <span>·</span>
+                    <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                    {postEdited && (
+                      <>
+                        <span>·</span>
+                        <span className="italic text-muted-foreground/70">edited</span>
+                      </>
+                    )}
+                  </div>
+                  {isPostOwner && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          aria-label="Post actions"
+                          className="-mr-2 -mt-1 rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem onClick={() => openEditPost(post)}>
+                          <Pencil className="mr-2 h-3.5 w-3.5" /> Edit post
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setDeletingPostId(post.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete post
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
                 <h3 className="mt-2 font-serif text-lg font-semibold text-foreground">{post.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+
 
                 <div className="mt-4 flex items-center gap-4">
                   <button
