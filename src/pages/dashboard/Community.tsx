@@ -79,7 +79,7 @@ export default function Community() {
   const fetchPosts = async () => {
     const { data } = await supabase
       .from("posts")
-      .select("id, user_id, title, content, category, created_at, likes(id, user_id), comments(id, user_id, content, created_at, updated_at)")
+      .select("id, user_id, title, content, category, created_at, updated_at, likes(id, user_id), comments(id, user_id, content, created_at, updated_at)")
       .eq("category", activeCategory)
       .order("created_at", { ascending: false });
 
