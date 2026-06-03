@@ -41,6 +41,7 @@ interface Post {
   content: string;
   category: string;
   created_at: string;
+  updated_at?: string | null;
   profiles: { full_name: string | null } | null;
   likes: { id: string; user_id: string }[];
   comments: Comment[];
