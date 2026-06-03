@@ -224,6 +224,80 @@ export default function Community() {
     }
   };
 
+  const openEditPost = (post: Post) => {
+    setEditingPost(post);
+    setEditPostTitle(post.title);
+    setEditPostContent(post.content);
+    setEditPostCategory(post.category);
+  };
+
+  const closeEditPost = () => {
+    setEditingPost(null);
+    setEditPostTitle("");
+    setEditPostContent("");
+  };
+
+  const saveEditPost = async () => {
+    if (!editingPost) return;
+    const title = editPostTitle.trim();
+    const content = editPostContent.trim();
+    if (!title || !content) {
+      toast({ variant: "destructive", title: "Title and content are required" });
+      return;
+    }
+    if (title.length > 200) {
+      toast({ variant: "destructive", title: "Title is too long", description: "Max 200 characters." });
+      return;
+    }
+    if (content.length > 5000) {
+      toast({ variant: "destructive", title: "Content is too long", description: "Max 5000 characters." });
+      return;
+    }
+    setSavingPost(true);
+    const { error } = await supabase
+      .from("posts")
+      .update({ title, content, category: editPostCategory })
+      .eq("id", editingPost.id)
+      .eq("user_id", user!.id);
+    setSavingPost(false);
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't update post", description: error.message });
+      return;
+    }
+    toast({ title: "Post updated" });
+    // Optimistic update if category unchanged
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === editingPost.id
+          ? { ...p, title, content, category: editPostCategory, updated_at: new Date().toISOString() }
+          : p
+      )
+    );
+    closeEditPost();
+    // If category changed, the post leaves the current feed.
+    if (editPostCategory !== activeCategory) fetchPosts();
+  };
+
+  const confirmDeletePost = async () => {
+    if (!deletingPostId) return;
+    const id = deletingPostId;
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+    setDeletingPostId(null);
+    const { error } = await supabase
+      .from("posts")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user!.id);
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't delete post", description: error.message });
+      fetchPosts();
+      return;
+    }
+    toast({ title: "Post deleted" });
+  };
+
+
+
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex items-center justify-between">
