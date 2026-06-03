@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, MessageCircle, Send, Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Heart, MessageCircle, Send, Plus, Pencil, Trash2, Check, X, MoreVertical } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -17,6 +17,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 
 interface Comment {
@@ -35,6 +41,7 @@ interface Post {
   content: string;
   category: string;
   created_at: string;
+  updated_at?: string | null;
   profiles: { full_name: string | null } | null;
   likes: { id: string; user_id: string }[];
   comments: Comment[];
@@ -62,11 +69,17 @@ export default function Community() {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [editPostTitle, setEditPostTitle] = useState("");
+  const [editPostContent, setEditPostContent] = useState("");
+  const [editPostCategory, setEditPostCategory] = useState("general");
+  const [savingPost, setSavingPost] = useState(false);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
 
   const fetchPosts = async () => {
     const { data } = await supabase
       .from("posts")
-      .select("id, user_id, title, content, category, created_at, likes(id, user_id), comments(id, user_id, content, created_at, updated_at)")
+      .select("id, user_id, title, content, category, created_at, updated_at, likes(id, user_id), comments(id, user_id, content, created_at, updated_at)")
       .eq("category", activeCategory)
       .order("created_at", { ascending: false });
 
@@ -211,6 +224,80 @@ export default function Community() {
     }
   };
 
+  const openEditPost = (post: Post) => {
+    setEditingPost(post);
+    setEditPostTitle(post.title);
+    setEditPostContent(post.content);
+    setEditPostCategory(post.category);
+  };
+
+  const closeEditPost = () => {
+    setEditingPost(null);
+    setEditPostTitle("");
+    setEditPostContent("");
+  };
+
+  const saveEditPost = async () => {
+    if (!editingPost) return;
+    const title = editPostTitle.trim();
+    const content = editPostContent.trim();
+    if (!title || !content) {
+      toast({ variant: "destructive", title: "Title and content are required" });
+      return;
+    }
+    if (title.length > 200) {
+      toast({ variant: "destructive", title: "Title is too long", description: "Max 200 characters." });
+      return;
+    }
+    if (content.length > 5000) {
+      toast({ variant: "destructive", title: "Content is too long", description: "Max 5000 characters." });
+      return;
+    }
+    setSavingPost(true);
+    const { error } = await supabase
+      .from("posts")
+      .update({ title, content, category: editPostCategory })
+      .eq("id", editingPost.id)
+      .eq("user_id", user!.id);
+    setSavingPost(false);
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't update post", description: error.message });
+      return;
+    }
+    toast({ title: "Post updated" });
+    // Optimistic update if category unchanged
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === editingPost.id
+          ? { ...p, title, content, category: editPostCategory, updated_at: new Date().toISOString() }
+          : p
+      )
+    );
+    closeEditPost();
+    // If category changed, the post leaves the current feed.
+    if (editPostCategory !== activeCategory) fetchPosts();
+  };
+
+  const confirmDeletePost = async () => {
+    if (!deletingPostId) return;
+    const id = deletingPostId;
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+    setDeletingPostId(null);
+    const { error } = await supabase
+      .from("posts")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user!.id);
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't delete post", description: error.message });
+      fetchPosts();
+      return;
+    }
+    toast({ title: "Post deleted" });
+  };
+
+
+
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex items-center justify-between">
@@ -285,15 +372,51 @@ export default function Community() {
         ) : (
           posts.map((post) => {
             const liked = post.likes.some((l) => l.user_id === user?.id);
+            const isPostOwner = post.user_id === user?.id;
+            const postEdited =
+              post.updated_at &&
+              new Date(post.updated_at).getTime() - new Date(post.created_at).getTime() > 1500;
             return (
               <div key={post.id} className="rounded-lg border border-border bg-card p-6">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">{post.profiles?.full_name || "Anonymous"}</span>
-                  <span>·</span>
-                  <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">{post.profiles?.full_name || "Anonymous"}</span>
+                    <span>·</span>
+                    <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                    {postEdited && (
+                      <>
+                        <span>·</span>
+                        <span className="italic text-muted-foreground/70">edited</span>
+                      </>
+                    )}
+                  </div>
+                  {isPostOwner && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          aria-label="Post actions"
+                          className="-mr-2 -mt-1 rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem onClick={() => openEditPost(post)}>
+                          <Pencil className="mr-2 h-3.5 w-3.5" /> Edit post
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setDeletingPostId(post.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete post
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
                 <h3 className="mt-2 font-serif text-lg font-semibold text-foreground">{post.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+
 
                 <div className="mt-4 flex items-center gap-4">
                   <button
@@ -426,6 +549,75 @@ export default function Community() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit post dialog */}
+      <Dialog open={!!editingPost} onOpenChange={(open) => !open && closeEditPost()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label>Category</Label>
+              <select
+                value={editPostCategory}
+                onChange={(e) => setEditPostCategory(e.target.value)}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                {categories.map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Title</Label>
+              <Input
+                value={editPostTitle}
+                onChange={(e) => setEditPostTitle(e.target.value)}
+                maxLength={200}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Content</Label>
+              <Textarea
+                value={editPostContent}
+                onChange={(e) => setEditPostContent(e.target.value)}
+                maxLength={5000}
+                rows={6}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={closeEditPost} disabled={savingPost}>Cancel</Button>
+              <Button onClick={saveEditPost} disabled={savingPost} className="bg-primary text-primary-foreground">
+                {savingPost ? "Saving…" : "Save changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete post confirmation */}
+      <AlertDialog open={!!deletingPostId} onOpenChange={(open) => !open && setDeletingPostId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this post?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the post along with its likes and comments. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeletePost}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete post
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
