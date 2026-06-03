@@ -4,9 +4,7 @@ import { IntroLoader } from "@/components/landing/IntroLoader";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { ProblemSection } from "@/components/landing/ProblemSection";
 import { KTTCWaySection } from "@/components/landing/KTTCWaySection";
-
 import { PlatformSection } from "@/components/landing/PlatformSection";
-
 import { FounderSection } from "@/components/landing/FounderSection";
 import { CTASection } from "@/components/landing/CTASection";
 import { Footer } from "@/components/landing/Footer";
@@ -31,9 +29,7 @@ const Index = () => {
         <HeroSection />
         <ProblemSection />
         <KTTCWaySection />
-        
         <PlatformSection />
-        
         <FounderSection />
         <CTASection />
         <Footer />
