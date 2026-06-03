@@ -5,9 +5,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, MessageCircle, Send, Plus } from "lucide-react";
+import { Heart, MessageCircle, Send, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
+
+interface Comment {
+  id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at?: string | null;
+  profiles: { full_name: string | null } | null;
+}
 
 interface Post {
   id: string;
@@ -18,7 +37,7 @@ interface Post {
   created_at: string;
   profiles: { full_name: string | null } | null;
   likes: { id: string; user_id: string }[];
-  comments: { id: string; user_id: string; content: string; created_at: string; profiles: { full_name: string | null } | null }[];
+  comments: Comment[];
 }
 
 const categories = [
@@ -40,18 +59,19 @@ export default function Community() {
   const [newCategory, setNewCategory] = useState("general");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   const fetchPosts = async () => {
     const { data } = await supabase
       .from("posts")
-      .select("id, user_id, title, content, category, created_at, likes(id, user_id), comments(id, user_id, content, created_at)")
+      .select("id, user_id, title, content, category, created_at, likes(id, user_id), comments(id, user_id, content, created_at, updated_at)")
       .eq("category", activeCategory)
       .order("created_at", { ascending: false });
 
     const rows = (data as any[]) || [];
 
-    // Collect all user ids referenced by posts + comments and fetch
-    // display names from the safe public_user_profiles view (no PII).
     const userIds = new Set<string>();
     rows.forEach((p) => {
       userIds.add(p.user_id);
@@ -72,10 +92,12 @@ export default function Community() {
     const enriched: Post[] = rows.map((p) => ({
       ...p,
       profiles: { full_name: nameMap[p.user_id] ?? null },
-      comments: (p.comments || []).map((c: any) => ({
-        ...c,
-        profiles: { full_name: nameMap[c.user_id] ?? null },
-      })),
+      comments: (p.comments || [])
+        .map((c: any) => ({
+          ...c,
+          profiles: { full_name: nameMap[c.user_id] ?? null },
+        }))
+        .sort((a: Comment, b: Comment) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
     }));
 
     setPosts(enriched);
@@ -87,7 +109,6 @@ export default function Community() {
     fetchPosts();
   }, [activeCategory]);
 
-  // Realtime
   useEffect(() => {
     const channel = supabase
       .channel("community")
@@ -128,8 +149,66 @@ export default function Community() {
   const handleComment = async (postId: string) => {
     const content = commentInputs[postId]?.trim();
     if (!content) return;
-    await supabase.from("comments").insert({ post_id: postId, user_id: user!.id, content });
+    const { error } = await supabase.from("comments").insert({ post_id: postId, user_id: user!.id, content });
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't post comment", description: error.message });
+      return;
+    }
     setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
+  };
+
+  const startEditComment = (c: Comment) => {
+    setEditingCommentId(c.id);
+    setEditingContent(c.content);
+  };
+
+  const cancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingContent("");
+  };
+
+  const saveEditComment = async (commentId: string) => {
+    const content = editingContent.trim();
+    if (!content) return;
+    // Optimistic UI
+    setPosts((prev) =>
+      prev.map((p) => ({
+        ...p,
+        comments: p.comments.map((c) =>
+          c.id === commentId ? { ...c, content, updated_at: new Date().toISOString() } : c
+        ),
+      }))
+    );
+    const { error } = await supabase
+      .from("comments")
+      .update({ content })
+      .eq("id", commentId)
+      .eq("user_id", user!.id);
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't update comment", description: error.message });
+      fetchPosts();
+      return;
+    }
+    cancelEditComment();
+  };
+
+  const confirmDeleteComment = async () => {
+    if (!deletingCommentId) return;
+    const id = deletingCommentId;
+    // Optimistic remove
+    setPosts((prev) =>
+      prev.map((p) => ({ ...p, comments: p.comments.filter((c) => c.id !== id) }))
+    );
+    setDeletingCommentId(null);
+    const { error } = await supabase
+      .from("comments")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user!.id);
+    if (error) {
+      toast({ variant: "destructive", title: "Couldn't delete comment", description: error.message });
+      fetchPosts();
+    }
   };
 
   return (
@@ -234,13 +313,83 @@ export default function Community() {
 
                 {/* Comments */}
                 {post.comments.length > 0 && (
-                  <div className="mt-4 space-y-2 border-t border-border pt-4">
-                    {post.comments.map((c) => (
-                      <div key={c.id} className="text-xs">
-                        <span className="font-medium text-foreground">{c.profiles?.full_name || "Anonymous"}</span>
-                        <span className="ml-2 text-muted-foreground">{c.content}</span>
-                      </div>
-                    ))}
+                  <div className="mt-4 space-y-3 border-t border-border pt-4">
+                    {post.comments.map((c) => {
+                      const isOwner = c.user_id === user?.id;
+                      const isEditing = editingCommentId === c.id;
+                      const edited =
+                        c.updated_at &&
+                        new Date(c.updated_at).getTime() - new Date(c.created_at).getTime() > 1500;
+                      return (
+                        <div key={c.id} className="group text-xs">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                <span className="font-medium text-foreground">
+                                  {c.profiles?.full_name || "Anonymous"}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {new Date(c.created_at).toLocaleDateString()}
+                                </span>
+                                {edited && (
+                                  <span className="italic text-muted-foreground/70">(edited)</span>
+                                )}
+                              </div>
+                              {isEditing ? (
+                                <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
+                                  <Textarea
+                                    value={editingContent}
+                                    onChange={(e) => setEditingContent(e.target.value)}
+                                    rows={2}
+                                    className="text-xs"
+                                    autoFocus
+                                  />
+                                  <div className="flex gap-1 sm:flex-col">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => saveEditComment(c.id)}
+                                      className="h-8 px-2"
+                                    >
+                                      <Check className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={cancelEditComment}
+                                      className="h-8 px-2"
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="mt-0.5 whitespace-pre-wrap text-muted-foreground">
+                                  {c.content}
+                                </p>
+                              )}
+                            </div>
+                            {isOwner && !isEditing && (
+                              <div className="flex shrink-0 gap-1 opacity-60 transition-opacity group-hover:opacity-100">
+                                <button
+                                  onClick={() => startEditComment(c)}
+                                  aria-label="Edit comment"
+                                  className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => setDeletingCommentId(c.id)}
+                                  aria-label="Delete comment"
+                                  className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -261,6 +410,26 @@ export default function Community() {
           })
         )}
       </div>
+
+      <AlertDialog open={!!deletingCommentId} onOpenChange={(open) => !open && setDeletingCommentId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The comment will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteComment}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
