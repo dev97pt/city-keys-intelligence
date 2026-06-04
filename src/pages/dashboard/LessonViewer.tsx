@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, Check,
-  ChevronLeft, ChevronRight, Play, Clock
+  ArrowLeft, Bookmark, BookmarkCheck, Check,
+  ChevronLeft, ChevronRight, Clock, Lock, Download, FileText,
 } from "lucide-react";
 
 export default function LessonViewer() {
@@ -26,9 +26,21 @@ export default function LessonViewer() {
   const [quizScore, setQuizScore] = useState(0);
   const [quizPassed, setQuizPassed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [signedVideoUrl, setSignedVideoUrl] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [prereq, setPrereq] = useState<{ id: string; title: string } | null>(null);
+  const [watchedPct, setWatchedPct] = useState(0);
+  const [resumeAt, setResumeAt] = useState(0);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const lastSaveRef = useRef(0);
+  const startedAtRef = useRef<number>(Date.now());
 
   useEffect(() => {
     if (!user || !courseId || !lessonId) return;
+    setLoading(true);
+    setSignedVideoUrl(null);
+    startedAtRef.current = Date.now();
+
     const load = async () => {
       const [
         { data: lessonData },
@@ -36,25 +48,57 @@ export default function LessonViewer() {
         { data: progressData },
         { data: bmData },
         { data: quizData },
+        { data: attachData },
+        { data: watchData },
       ] = await Promise.all([
         supabase.from("lessons").select("*, modules(title, course_id, courses(title))").eq("id", lessonId).single(),
         supabase.from("modules").select("*, lessons(*)").eq("course_id", courseId).order("order_index"),
         supabase.from("lesson_progress").select("completed").eq("user_id", user.id).eq("lesson_id", lessonId).maybeSingle(),
         supabase.from("lesson_bookmarks").select("id").eq("user_id", user.id).eq("lesson_id", lessonId),
         supabase.from("quizzes").select("*, quiz_questions(*, quiz_answers(*))").eq("lesson_id", lessonId).maybeSingle(),
+        supabase.from("lesson_attachments").select("*").eq("lesson_id", lessonId).order("order_index"),
+        supabase.from("video_watch_history").select("*").eq("user_id", user.id).eq("lesson_id", lessonId).maybeSingle(),
       ]);
+
       setLesson(lessonData);
       const sorted = (modulesData || [])
         .sort((a: any, b: any) => a.order_index - b.order_index)
-        .flatMap((m: any) => (m.lessons || []).sort((a: any, b: any) => a.order_index - b.order_index));
+        .flatMap((m: any) => (m.lessons || []).filter((l: any) => l.status !== "draft").sort((a: any, b: any) => a.order_index - b.order_index));
       setAllLessons(sorted);
       setCompleted(progressData?.completed || false);
       setBookmarked((bmData || []).length > 0);
+      setAttachments(attachData || []);
+      setWatchedPct(watchData?.watched_percentage || 0);
+      setResumeAt(watchData?.last_position_seconds || 0);
+
       if (quizData) {
         setQuiz(quizData);
         setQuizQuestions((quizData.quiz_questions || []).sort((a: any, b: any) => a.order_index - b.order_index));
+      } else {
+        setQuiz(null);
+        setQuizQuestions([]);
       }
-      // Track activity
+
+      // Prerequisite check
+      if (lessonData?.prerequisite_lesson_id) {
+        const [{ data: preq }, { data: preqProgress }] = await Promise.all([
+          supabase.from("lessons").select("id,title").eq("id", lessonData.prerequisite_lesson_id).maybeSingle(),
+          supabase.from("lesson_progress").select("completed").eq("user_id", user.id).eq("lesson_id", lessonData.prerequisite_lesson_id).maybeSingle(),
+        ]);
+        if (preq && !preqProgress?.completed) setPrereq(preq);
+        else setPrereq(null);
+      } else {
+        setPrereq(null);
+      }
+
+      // Signed URL for uploaded video
+      if (lessonData?.video_storage_path) {
+        const { data: signed } = await supabase.storage
+          .from("lesson-videos")
+          .createSignedUrl(lessonData.video_storage_path, 3600);
+        setSignedVideoUrl(signed?.signedUrl || null);
+      }
+
       await supabase.from("user_lesson_activity").upsert(
         { user_id: user.id, lesson_id: lessonId, last_viewed_at: new Date().toISOString() },
         { onConflict: "user_id,lesson_id" }
@@ -64,14 +108,58 @@ export default function LessonViewer() {
     load();
   }, [user, courseId, lessonId]);
 
+  // Resume playback position
+  useEffect(() => {
+    if (videoRef.current && resumeAt > 1) {
+      videoRef.current.currentTime = resumeAt;
+    }
+  }, [signedVideoUrl, resumeAt]);
+
+  const persistWatch = async (currentTime: number, duration: number) => {
+    if (!user || !lessonId) return;
+    const pct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+    setWatchedPct(pct);
+    const elapsed = Math.max(0, (Date.now() - startedAtRef.current) / 1000);
+    startedAtRef.current = Date.now();
+
+    await supabase.from("video_watch_history").upsert(
+      {
+        user_id: user.id,
+        lesson_id: lessonId,
+        last_position_seconds: currentTime,
+        watched_percentage: pct,
+        watch_count: 1,
+        total_watch_seconds: elapsed,
+      },
+      { onConflict: "user_id,lesson_id" }
+    );
+
+    if (pct >= 90 && !completed && lesson?.auto_complete_on_watch !== false) {
+      markComplete();
+    }
+  };
+
+  const onTimeUpdate = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    const now = Date.now();
+    if (now - lastSaveRef.current < 10000) return; // throttle 10s
+    lastSaveRef.current = now;
+    persistWatch(v.currentTime, v.duration || 0);
+  };
+
+  const onEnded = () => {
+    const v = videoRef.current;
+    if (v) persistWatch(v.duration, v.duration);
+  };
+
   const markComplete = async () => {
     if (!user || !lessonId) return;
     await supabase.from("lesson_progress").upsert(
-      { user_id: user.id, lesson_id: lessonId, completed: true },
+      { user_id: user.id, lesson_id: lessonId, completed: true, watched_percentage: Math.max(watchedPct, 100) },
       { onConflict: "user_id,lesson_id" }
     );
     setCompleted(true);
-    // Update course progress
     if (courseId) {
       const totalLessons = allLessons.length;
       const { count } = await supabase
@@ -99,6 +187,13 @@ export default function LessonViewer() {
     setBookmarked(!bookmarked);
   };
 
+  const downloadAttachment = async (a: any) => {
+    const { data } = await supabase.storage
+      .from("lesson-attachments")
+      .createSignedUrl(a.file_storage_path, 3600, { download: a.title });
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  };
+
   const submitQuiz = async () => {
     if (!user || !quiz) return;
     let correct = 0;
@@ -113,26 +208,17 @@ export default function LessonViewer() {
     setQuizPassed(passed);
     setQuizSubmitted(true);
 
-    // Save attempt
     const { data: attempt } = await supabase.from("user_quiz_attempts").insert({
-      user_id: user.id,
-      quiz_id: quiz.id,
-      score,
-      passed,
+      user_id: user.id, quiz_id: quiz.id, score, passed,
     }).select("id").single();
 
     if (attempt) {
       const answers = Object.entries(selectedAnswers).map(([questionId, answerId]) => ({
-        attempt_id: attempt.id,
-        question_id: questionId,
-        selected_answer_id: answerId,
+        attempt_id: attempt.id, question_id: questionId, selected_answer_id: answerId,
       }));
       if (answers.length > 0) await supabase.from("user_quiz_answers").insert(answers);
     }
-
-    if (passed && quiz.is_required) {
-      markComplete();
-    }
+    if (passed && quiz.is_required) markComplete();
   };
 
   const retakeQuiz = () => {
@@ -158,6 +244,26 @@ export default function LessonViewer() {
     return <p className="text-center text-muted-foreground py-24">Lesson not found.</p>;
   }
 
+  if (prereq) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/dashboard/courses/${courseId}`)} className="mb-4 text-muted-foreground">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Course
+        </Button>
+        <div className="rounded-xl border border-border bg-card p-12 text-center">
+          <Lock className="mx-auto h-10 w-10 text-muted-foreground" />
+          <h2 className="mt-4 font-serif text-xl font-semibold text-foreground">Locked</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Complete <span className="text-foreground font-medium">"{prereq.title}"</span> first to unlock this lesson.
+          </p>
+          <Button className="mt-6" onClick={() => navigate(`/dashboard/courses/${courseId}/lesson/${prereq.id}`)}>
+            Go to prerequisite
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-4xl">
       <Button variant="ghost" size="sm" onClick={() => navigate(`/dashboard/courses/${courseId}`)} className="mb-4 text-muted-foreground">
@@ -165,7 +271,21 @@ export default function LessonViewer() {
       </Button>
 
       {/* Video Player */}
-      {lesson.video_url && (
+      {signedVideoUrl ? (
+        <div className="w-full rounded-xl overflow-hidden border border-border bg-black mb-6">
+          <video
+            ref={videoRef}
+            src={signedVideoUrl}
+            controls
+            controlsList="nodownload"
+            playsInline
+            preload="metadata"
+            onTimeUpdate={onTimeUpdate}
+            onEnded={onEnded}
+            className="w-full h-auto max-h-[70vh] bg-black"
+          />
+        </div>
+      ) : lesson.video_url ? (
         <div className="aspect-video w-full rounded-xl overflow-hidden border border-border bg-black mb-6">
           <iframe
             src={lesson.video_url}
@@ -174,6 +294,19 @@ export default function LessonViewer() {
             allowFullScreen
           />
         </div>
+      ) : null}
+
+      {/* Watch progress bar */}
+      {signedVideoUrl && (
+        <div className="mb-4">
+          <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+            <span>Watched</span>
+            <span>{Math.round(watchedPct)}%</span>
+          </div>
+          <div className="h-1 w-full overflow-hidden rounded-full bg-secondary">
+            <div className="h-full bg-primary transition-all" style={{ width: `${watchedPct}%` }} />
+          </div>
+        </div>
       )}
 
       {/* Lesson Header */}
@@ -181,6 +314,7 @@ export default function LessonViewer() {
         <div>
           <p className="text-xs text-muted-foreground">{lesson.modules?.courses?.title} · {lesson.modules?.title}</p>
           <h1 className="mt-1 font-serif text-2xl font-semibold text-foreground">{lesson.title}</h1>
+          {lesson.description && <p className="mt-1 text-sm text-muted-foreground">{lesson.description}</p>}
           <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {lesson.duration_minutes || 5} min</span>
             {completed && (
@@ -208,6 +342,28 @@ export default function LessonViewer() {
           <div className="prose prose-invert max-w-none text-sm leading-relaxed text-foreground/80">
             {lesson.content.split("\n").map((p: string, i: number) => (
               <p key={i}>{p}</p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Attachments */}
+      {attachments.length > 0 && (
+        <div className="mt-6 rounded-xl border border-border bg-card p-6">
+          <h3 className="font-serif text-sm font-semibold text-foreground mb-3">Attachments</h3>
+          <div className="space-y-2">
+            {attachments.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => downloadAttachment(a)}
+                className="flex w-full items-center justify-between rounded-lg border border-border/60 bg-secondary/10 px-3 py-2 text-xs hover:border-primary/40 transition-colors"
+              >
+                <span className="flex items-center gap-2 text-foreground">
+                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                  {a.title}
+                </span>
+                <Download className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
             ))}
           </div>
         </div>
