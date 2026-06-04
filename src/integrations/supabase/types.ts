@@ -603,6 +603,47 @@ export type Database = {
           },
         ]
       }
+      lesson_attachments: {
+        Row: {
+          created_at: string
+          file_size_bytes: number | null
+          file_storage_path: string
+          id: string
+          lesson_id: string
+          mime_type: string | null
+          order_index: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          file_size_bytes?: number | null
+          file_storage_path: string
+          id?: string
+          lesson_id: string
+          mime_type?: string | null
+          order_index?: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          file_size_bytes?: number | null
+          file_storage_path?: string
+          id?: string
+          lesson_id?: string
+          mime_type?: string | null
+          order_index?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_attachments_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_bookmarks: {
         Row: {
           created_at: string
@@ -637,22 +678,31 @@ export type Database = {
           completed: boolean
           created_at: string
           id: string
+          last_position_seconds: number
           lesson_id: string
+          updated_at: string
           user_id: string
+          watched_percentage: number
         }
         Insert: {
           completed?: boolean
           created_at?: string
           id?: string
+          last_position_seconds?: number
           lesson_id: string
+          updated_at?: string
           user_id: string
+          watched_percentage?: number
         }
         Update: {
           completed?: boolean
           created_at?: string
           id?: string
+          last_position_seconds?: number
           lesson_id?: string
+          updated_at?: string
           user_id?: string
+          watched_percentage?: number
         }
         Relationships: [
           {
@@ -666,33 +716,69 @@ export type Database = {
       }
       lessons: {
         Row: {
+          auto_complete_on_watch: boolean
           content: string | null
           created_at: string
+          description: string | null
           duration_minutes: number | null
           id: string
           module_id: string
           order_index: number
+          prerequisite_lesson_id: string | null
+          status: string
+          thumbnail_storage_path: string | null
+          thumbnail_url: string | null
           title: string
+          updated_at: string
+          video_duration_seconds: number | null
+          video_mime_type: string | null
+          video_size_bytes: number | null
+          video_storage_path: string | null
+          video_uploaded_at: string | null
           video_url: string | null
         }
         Insert: {
+          auto_complete_on_watch?: boolean
           content?: string | null
           created_at?: string
+          description?: string | null
           duration_minutes?: number | null
           id?: string
           module_id: string
           order_index?: number
+          prerequisite_lesson_id?: string | null
+          status?: string
+          thumbnail_storage_path?: string | null
+          thumbnail_url?: string | null
           title: string
+          updated_at?: string
+          video_duration_seconds?: number | null
+          video_mime_type?: string | null
+          video_size_bytes?: number | null
+          video_storage_path?: string | null
+          video_uploaded_at?: string | null
           video_url?: string | null
         }
         Update: {
+          auto_complete_on_watch?: boolean
           content?: string | null
           created_at?: string
+          description?: string | null
           duration_minutes?: number | null
           id?: string
           module_id?: string
           order_index?: number
+          prerequisite_lesson_id?: string | null
+          status?: string
+          thumbnail_storage_path?: string | null
+          thumbnail_url?: string | null
           title?: string
+          updated_at?: string
+          video_duration_seconds?: number | null
+          video_mime_type?: string | null
+          video_size_bytes?: number | null
+          video_storage_path?: string | null
+          video_uploaded_at?: string | null
           video_url?: string | null
         }
         Relationships: [
@@ -701,6 +787,13 @@ export type Database = {
             columns: ["module_id"]
             isOneToOne: false
             referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_prerequisite_lesson_id_fkey"
+            columns: ["prerequisite_lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
             referencedColumns: ["id"]
           },
         ]
@@ -752,6 +845,7 @@ export type Database = {
           id: string
           order_index: number
           title: string
+          updated_at: string
         }
         Insert: {
           course_id: string
@@ -759,6 +853,7 @@ export type Database = {
           id?: string
           order_index?: number
           title: string
+          updated_at?: string
         }
         Update: {
           course_id?: string
@@ -766,6 +861,7 @@ export type Database = {
           id?: string
           order_index?: number
           title?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -1495,6 +1591,64 @@ export type Database = {
             columns: ["neighborhood_id"]
             isOneToOne: false
             referencedRelation: "neighborhoods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_watch_history: {
+        Row: {
+          created_at: string
+          id: string
+          last_position_seconds: number
+          lesson_id: string
+          total_watch_seconds: number
+          updated_at: string
+          user_id: string
+          watch_count: number
+          watched_percentage: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_position_seconds?: number
+          lesson_id: string
+          total_watch_seconds?: number
+          updated_at?: string
+          user_id: string
+          watch_count?: number
+          watched_percentage?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_position_seconds?: number
+          lesson_id?: string
+          total_watch_seconds?: number
+          updated_at?: string
+          user_id?: string
+          watch_count?: number
+          watched_percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_watch_history_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_watch_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_watch_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
             referencedColumns: ["id"]
           },
         ]
