@@ -47,7 +47,9 @@ export default function CourseDetail() {
       // Sort lessons within each module
       const sorted = (modulesData || []).map((m: any) => ({
         ...m,
-        lessons: (m.lessons || []).sort((a: any, b: any) => a.order_index - b.order_index),
+        lessons: (m.lessons || [])
+          .filter((l: any) => l.status !== "draft")
+          .sort((a: any, b: any) => a.order_index - b.order_index),
       }));
       setModules(sorted);
       setEnrollment(enrollData);

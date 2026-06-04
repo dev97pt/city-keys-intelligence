@@ -7,13 +7,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
-  Plus, Trash2, Edit, GripVertical, BookOpen, Play, Save,
-  ChevronDown, ChevronRight, Shield, BarChart3, Users, GraduationCap
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Plus, Trash2, Edit, GripVertical, Play, Save, ChevronDown, ChevronRight,
+  Shield, Copy, EyeOff, Eye, MoreVertical,
 } from "lucide-react";
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import LessonEditor from "@/components/admin/LessonEditor";
 
 /* ── Course Editor ── */
 function CourseManager() {
@@ -52,6 +65,33 @@ function CourseManager() {
   const deleteCourse = async (id: string) => {
     await supabase.from("courses").delete().eq("id", id);
     toast({ title: "Course deleted" });
+    fetchCourses();
+  };
+
+  const duplicateCourse = async (c: any) => {
+    const { data: newCourse } = await supabase.from("courses").insert({
+      title: `${c.title} (copy)`,
+      description: c.description, thumbnail_url: c.thumbnail_url,
+      price: c.price, is_paid: c.is_paid, category: c.category, is_published: false,
+    }).select("*").single();
+    if (!newCourse) return;
+    const { data: mods } = await supabase.from("modules").select("*, lessons(*)").eq("course_id", c.id).order("order_index");
+    for (const m of mods || []) {
+      const { data: newMod } = await supabase.from("modules").insert({
+        course_id: newCourse.id, title: m.title, order_index: m.order_index,
+      }).select("id").single();
+      if (!newMod) continue;
+      const lessons = (m.lessons || []).sort((a: any, b: any) => a.order_index - b.order_index);
+      if (lessons.length) {
+        await supabase.from("lessons").insert(lessons.map((l: any) => ({
+          module_id: newMod.id, title: l.title, description: l.description, content: l.content,
+          duration_minutes: l.duration_minutes, order_index: l.order_index, status: "draft",
+          video_url: l.video_url, // note: storage paths are not duplicated to avoid double-references
+          auto_complete_on_watch: l.auto_complete_on_watch,
+        })));
+      }
+    }
+    toast({ title: "Course duplicated" });
     fetchCourses();
   };
 
@@ -110,48 +150,86 @@ function CourseManager() {
         </div>
       )}
 
-      <div className="space-y-2">
-        {courses.map((c) => (
-          <div key={c.id} className="rounded-lg border border-border bg-card">
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => expandCourse(c.id)}>
-                {expandedCourse === c.id ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground">{c.title}</span>
-                    {c.is_published ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px]">Published</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-[10px]">Draft</Badge>
-                    )}
-                    {c.is_paid && <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">€{c.price}</Badge>}
+      {courses.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-12 text-center">
+          <p className="text-sm text-muted-foreground">No courses yet. Click "New Course" to start.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {courses.map((c) => (
+            <div key={c.id} className="rounded-lg border border-border bg-card">
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={() => expandCourse(c.id)}>
+                  {expandedCourse === c.id ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-foreground truncate">{c.title}</span>
+                      {c.is_published ? (
+                        <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px]">Published</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px]">Draft</Badge>
+                      )}
+                      {c.is_paid && <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">€{c.price}</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{c.category}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">{c.category}</p>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <Button variant="ghost" size="sm" className="h-7" onClick={() => duplicateCourse(c)} title="Duplicate">
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7" onClick={() => editCourse(c)} title="Edit"><Edit className="h-3 w-3" /></Button>
+                  <ConfirmDelete onConfirm={() => deleteCourse(c.id)} label={`Delete course "${c.title}"?`} description="All modules, lessons, videos and attachments will be deleted." />
                 </div>
               </div>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="sm" className="h-7" onClick={() => editCourse(c)}><Edit className="h-3 w-3" /></Button>
-                <Button variant="ghost" size="sm" className="h-7 text-destructive" onClick={() => deleteCourse(c.id)}><Trash2 className="h-3 w-3" /></Button>
-              </div>
+              {expandedCourse === c.id && (
+                <div className="border-t border-border p-4">
+                  <ModuleManager courseId={c.id} modules={courseModules} onRefresh={() => expandCourse(c.id)} />
+                </div>
+              )}
             </div>
-            {expandedCourse === c.id && (
-              <div className="border-t border-border p-4">
-                <ModuleManager courseId={c.id} modules={courseModules} onRefresh={() => expandCourse(c.id)} />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
+}
+
+/* ── Sortable Module Card ── */
+function SortableModule({ id, children }: { id: string; children: (handleProps: any) => React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return <div ref={setNodeRef} style={style}>{children({ ...attributes, ...listeners })}</div>;
+}
+
+/* ── Sortable Lesson Row ── */
+function SortableLesson({ id, children }: { id: string; children: (handleProps: any) => React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return <div ref={setNodeRef} style={style}>{children({ ...attributes, ...listeners })}</div>;
 }
 
 /* ── Module & Lesson Manager ── */
 function ModuleManager({ courseId, modules, onRefresh }: { courseId: string; modules: any[]; onRefresh: () => void }) {
   const { toast } = useToast();
   const [newModule, setNewModule] = useState("");
-  const [addingLesson, setAddingLesson] = useState<string | null>(null);
-  const [lessonForm, setLessonForm] = useState({ title: "", video_url: "", content: "", duration_minutes: 5 });
+  const [editorState, setEditorState] = useState<{ open: boolean; moduleId: string; lesson: any | null; nextOrder: number }>({
+    open: false, moduleId: "", lesson: null, nextOrder: 0,
+  });
+  const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set());
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const addModule = async () => {
     if (!newModule.trim()) return;
@@ -167,72 +245,245 @@ function ModuleManager({ courseId, modules, onRefresh }: { courseId: string; mod
     onRefresh();
   };
 
-  const addLesson = async (moduleId: string) => {
-    if (!lessonForm.title.trim()) return;
-    const lessons = modules.find((m) => m.id === moduleId)?.lessons || [];
-    await supabase.from("lessons").insert({ module_id: moduleId, ...lessonForm, order_index: lessons.length });
-    setAddingLesson(null);
-    setLessonForm({ title: "", video_url: "", content: "", duration_minutes: 5 });
-    toast({ title: "Lesson added" });
-    onRefresh();
-  };
-
-  const deleteLesson = async (id: string) => {
-    await supabase.from("lessons").delete().eq("id", id);
+  const deleteLesson = async (l: any) => {
+    if (l.video_storage_path) {
+      await supabase.storage.from("lesson-videos").remove([l.video_storage_path]).catch(() => {});
+    }
+    await supabase.from("lessons").delete().eq("id", l.id);
     toast({ title: "Lesson deleted" });
     onRefresh();
   };
 
+  const duplicateLesson = async (l: any) => {
+    const lessons = modules.find((m) => m.id === l.module_id)?.lessons || [];
+    await supabase.from("lessons").insert({
+      module_id: l.module_id, title: `${l.title} (copy)`, description: l.description,
+      content: l.content, duration_minutes: l.duration_minutes, order_index: lessons.length,
+      status: "draft", video_url: l.video_url, auto_complete_on_watch: l.auto_complete_on_watch,
+    });
+    toast({ title: "Lesson duplicated" });
+    onRefresh();
+  };
+
+  const handleModuleDragEnd = async (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = modules.findIndex((m) => m.id === active.id);
+    const newIdx = modules.findIndex((m) => m.id === over.id);
+    const reordered = arrayMove(modules, oldIdx, newIdx);
+    // Persist new order_index for each
+    await Promise.all(reordered.map((m, i) => supabase.from("modules").update({ order_index: i }).eq("id", m.id)));
+    onRefresh();
+  };
+
+  const handleLessonDragEnd = (moduleId: string, lessons: any[]) => async (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = lessons.findIndex((l) => l.id === active.id);
+    const newIdx = lessons.findIndex((l) => l.id === over.id);
+    const reordered = arrayMove(lessons, oldIdx, newIdx);
+    await Promise.all(reordered.map((l, i) => supabase.from("lessons").update({ order_index: i }).eq("id", l.id)));
+    onRefresh();
+  };
+
+  const toggleSelect = (lessonId: string) => {
+    setSelectedLessons((s) => {
+      const next = new Set(s);
+      if (next.has(lessonId)) next.delete(lessonId); else next.add(lessonId);
+      return next;
+    });
+  };
+
+  const bulkSetStatus = async (status: "published" | "draft") => {
+    if (selectedLessons.size === 0) return;
+    await supabase.from("lessons").update({ status }).in("id", Array.from(selectedLessons));
+    toast({ title: `${selectedLessons.size} lesson(s) ${status === "published" ? "published" : "set to draft"}` });
+    setSelectedLessons(new Set());
+    onRefresh();
+  };
+
+  const bulkDelete = async () => {
+    if (selectedLessons.size === 0) return;
+    const ids = Array.from(selectedLessons);
+    // Cleanup videos
+    const { data } = await supabase.from("lessons").select("video_storage_path").in("id", ids);
+    const paths = (data || []).map((d: any) => d.video_storage_path).filter(Boolean);
+    if (paths.length) await supabase.storage.from("lesson-videos").remove(paths).catch(() => {});
+    await supabase.from("lessons").delete().in("id", ids);
+    toast({ title: `${ids.length} lesson(s) deleted` });
+    setSelectedLessons(new Set());
+    onRefresh();
+  };
+
+  const allLessons = modules.flatMap((m) => m.lessons || []);
+
   return (
     <div className="space-y-4">
-      {modules.map((mod) => (
-        <div key={mod.id} className="rounded-lg border border-border/50 bg-secondary/10 p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">{mod.title}</span>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setAddingLesson(mod.id)}>
-                <Plus className="h-3 w-3 mr-1" /> Lesson
+      {selectedLessons.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+          <span className="text-xs text-foreground">{selectedLessons.size} selected</span>
+          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkSetStatus("published")}>
+            <Eye className="h-3 w-3 mr-1" /> Publish
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkSetStatus("draft")}>
+            <EyeOff className="h-3 w-3 mr-1" /> Unpublish
+          </Button>
+          <ConfirmDelete
+            onConfirm={bulkDelete}
+            label={`Delete ${selectedLessons.size} lesson(s)?`}
+            description="This will also remove uploaded videos. Cannot be undone."
+            trigger={
+              <Button size="sm" variant="outline" className="h-7 text-xs text-destructive">
+                <Trash2 className="h-3 w-3 mr-1" /> Delete
               </Button>
-              <Button variant="ghost" size="sm" className="h-6 text-xs text-destructive" onClick={() => deleteModule(mod.id)}>
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-          {(mod.lessons || []).map((l: any) => (
-            <div key={l.id} className="flex items-center justify-between mt-2 pl-4 text-xs">
-              <div className="flex items-center gap-2">
-                <Play className="h-3 w-3 text-muted-foreground" />
-                <span className="text-foreground">{l.title}</span>
-                <span className="text-muted-foreground">{l.duration_minutes}min</span>
-              </div>
-              <Button variant="ghost" size="sm" className="h-5 px-1 text-destructive" onClick={() => deleteLesson(l.id)}>
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-          ))}
-          {addingLesson === mod.id && (
-            <div className="mt-3 space-y-2 border-t border-border/30 pt-3">
-              <Input placeholder="Lesson title" value={lessonForm.title} onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })} className="h-8 text-xs" />
-              <Input placeholder="Video URL (embed)" value={lessonForm.video_url} onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })} className="h-8 text-xs" />
-              <Textarea placeholder="Content" value={lessonForm.content} onChange={(e) => setLessonForm({ ...lessonForm, content: e.target.value })} className="text-xs min-h-[60px]" />
-              <div className="flex gap-2">
-                <Input type="number" placeholder="Duration (min)" value={lessonForm.duration_minutes} onChange={(e) => setLessonForm({ ...lessonForm, duration_minutes: parseInt(e.target.value) || 5 })} className="h-8 text-xs w-32" />
-                <Button size="sm" className="h-8 text-xs" onClick={() => addLesson(mod.id)}>Add</Button>
-                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setAddingLesson(null)}>Cancel</Button>
-              </div>
-            </div>
-          )}
+            }
+          />
+          <Button size="sm" variant="ghost" className="h-7 text-xs ml-auto" onClick={() => setSelectedLessons(new Set())}>
+            Clear
+          </Button>
         </div>
-      ))}
+      )}
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleModuleDragEnd}>
+        <SortableContext items={modules.map((m) => m.id)} strategy={verticalListSortingStrategy}>
+          {modules.map((mod) => (
+            <SortableModule key={mod.id} id={mod.id}>
+              {(dragProps) => (
+                <div className="rounded-lg border border-border/50 bg-secondary/10 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <button {...dragProps} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground" type="button">
+                        <GripVertical className="h-4 w-4" />
+                      </button>
+                      <span className="text-sm font-medium text-foreground truncate">{mod.title}</span>
+                      <span className="text-[10px] text-muted-foreground">{(mod.lessons || []).length} lessons</span>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setEditorState({ open: true, moduleId: mod.id, lesson: null, nextOrder: (mod.lessons || []).length })}>
+                        <Plus className="h-3 w-3 mr-1" /> Lesson
+                      </Button>
+                      <ConfirmDelete
+                        onConfirm={() => deleteModule(mod.id)}
+                        label={`Delete module "${mod.title}"?`}
+                        description="All lessons inside will also be removed."
+                        trigger={
+                          <Button variant="ghost" size="sm" className="h-6 text-xs text-destructive">
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {(mod.lessons || []).length > 0 && (
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLessonDragEnd(mod.id, mod.lessons)}>
+                      <SortableContext items={(mod.lessons || []).map((l: any) => l.id)} strategy={verticalListSortingStrategy}>
+                        <div className="mt-2 space-y-1">
+                          {(mod.lessons || []).map((l: any) => (
+                            <SortableLesson key={l.id} id={l.id}>
+                              {(dragProps) => (
+                                <div className="flex items-center justify-between gap-2 rounded border border-border/30 bg-card/40 pl-2 pr-1 py-1.5 text-xs">
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <button {...dragProps} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground" type="button">
+                                      <GripVertical className="h-3 w-3" />
+                                    </button>
+                                    <Checkbox
+                                      checked={selectedLessons.has(l.id)}
+                                      onCheckedChange={() => toggleSelect(l.id)}
+                                      className="h-3.5 w-3.5"
+                                    />
+                                    <Play className="h-3 w-3 text-muted-foreground shrink-0" />
+                                    <span className="text-foreground truncate">{l.title}</span>
+                                    {l.status === "draft" ? (
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0">Draft</Badge>
+                                    ) : (
+                                      <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[9px] px-1 py-0">Live</Badge>
+                                    )}
+                                    {l.video_storage_path && <Badge className="bg-primary/10 text-primary border-primary/20 text-[9px] px-1 py-0">Upload</Badge>}
+                                    {!l.video_storage_path && l.video_url && <Badge variant="outline" className="text-[9px] px-1 py-0">URL</Badge>}
+                                    <span className="text-muted-foreground shrink-0">{l.duration_minutes || 0}m</span>
+                                  </div>
+                                  <div className="flex gap-0.5 shrink-0">
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setEditorState({ open: true, moduleId: mod.id, lesson: l, nextOrder: l.order_index })}>
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => duplicateLesson(l)} title="Duplicate">
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                    <ConfirmDelete
+                                      onConfirm={() => deleteLesson(l)}
+                                      label={`Delete lesson "${l.title}"?`}
+                                      description="Video and attachments will be removed."
+                                      trigger={
+                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive">
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </SortableLesson>
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  )}
+                </div>
+              )}
+            </SortableModule>
+          ))}
+        </SortableContext>
+      </DndContext>
+
       <div className="flex gap-2">
         <Input placeholder="New module name" value={newModule} onChange={(e) => setNewModule(e.target.value)} className="h-8 text-xs" />
         <Button size="sm" className="h-8 text-xs" onClick={addModule}><Plus className="h-3 w-3 mr-1" /> Module</Button>
       </div>
+
+      <LessonEditor
+        open={editorState.open}
+        onOpenChange={(v) => setEditorState((s) => ({ ...s, open: v }))}
+        lesson={editorState.lesson}
+        moduleId={editorState.moduleId}
+        nextOrderIndex={editorState.nextOrder}
+        prerequisiteOptions={allLessons.map((l) => ({ id: l.id, title: l.title }))}
+        onSaved={onRefresh}
+      />
     </div>
   );
 }
 
-/* ── Learning Path Manager ── */
+/* ── Confirm Delete helper ── */
+function ConfirmDelete({
+  onConfirm, label, description, trigger,
+}: { onConfirm: () => void; label: string; description?: string; trigger?: React.ReactNode }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        {trigger || (
+          <Button variant="ghost" size="sm" className="h-7 text-destructive">
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        )}
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{label}</AlertDialogTitle>
+          {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+/* ── Learning Path Manager (unchanged) ── */
 function PathManager() {
   const { toast } = useToast();
   const [paths, setPaths] = useState<any[]>([]);
@@ -352,7 +603,7 @@ function PathManager() {
             </div>
             <div className="flex gap-1">
               <Button variant="ghost" size="sm" className="h-7" onClick={() => editPath(p)}><Edit className="h-3 w-3" /></Button>
-              <Button variant="ghost" size="sm" className="h-7 text-destructive" onClick={() => deletePath(p.id)}><Trash2 className="h-3 w-3" /></Button>
+              <ConfirmDelete onConfirm={() => deletePath(p.id)} label={`Delete path "${p.title}"?`} />
             </div>
           </div>
         ))}
@@ -361,17 +612,21 @@ function PathManager() {
   );
 }
 
-/* ── Course Analytics ── */
+/* ── Course Analytics with video metrics ── */
 function CourseAnalytics() {
   const [stats, setStats] = useState<any[]>([]);
+  const [lessonStats, setLessonStats] = useState<any[]>([]);
+  const [totalViews, setTotalViews] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
-      const [{ data: courses }, { data: enrollments }, { data: purchases }] = await Promise.all([
+      const [{ data: courses }, { data: enrollments }, { data: purchases }, { data: lessons }, { data: watch }] = await Promise.all([
         supabase.from("courses").select("id, title, price, is_paid"),
         supabase.from("course_enrollments").select("course_id, completed"),
         supabase.from("course_purchases").select("course_id, amount, payment_status"),
+        supabase.from("lessons").select("id, title, module_id, modules(course_id, courses(title))"),
+        supabase.from("video_watch_history").select("lesson_id, watch_count, watched_percentage"),
       ]);
       const courseStats = (courses || []).map((c) => {
         const courseEnroll = (enrollments || []).filter((e) => e.course_id === c.id);
@@ -380,6 +635,29 @@ function CourseAnalytics() {
         return { ...c, enrollments: courseEnroll.length, completionRate: courseEnroll.length > 0 ? Math.round((completed / courseEnroll.length) * 100) : 0, revenue };
       });
       setStats(courseStats);
+
+      const watchByLesson: Record<string, { views: number; sumPct: number; count: number }> = {};
+      let viewsTotal = 0;
+      (watch || []).forEach((w: any) => {
+        viewsTotal += w.watch_count || 0;
+        const e = watchByLesson[w.lesson_id] || { views: 0, sumPct: 0, count: 0 };
+        e.views += w.watch_count || 0;
+        e.sumPct += w.watched_percentage || 0;
+        e.count += 1;
+        watchByLesson[w.lesson_id] = e;
+      });
+      setTotalViews(viewsTotal);
+
+      const enriched = (lessons || []).map((l: any) => {
+        const w = watchByLesson[l.id] || { views: 0, sumPct: 0, count: 0 };
+        return {
+          id: l.id, title: l.title,
+          course: l.modules?.courses?.title || "—",
+          views: w.views,
+          avgPct: w.count > 0 ? Math.round(w.sumPct / w.count) : 0,
+        };
+      }).sort((a, b) => b.views - a.views);
+      setLessonStats(enriched);
       setLoading(false);
     };
     load();
@@ -387,35 +665,74 @@ function CourseAnalytics() {
 
   if (loading) return <Spinner />;
 
+  const mostWatched = lessonStats.slice(0, 5);
+  const leastWatched = lessonStats.filter((l) => l.views >= 0).slice(-5).reverse();
+
   return (
-    <div>
-      <div className="grid gap-4 sm:grid-cols-3 mb-6">
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-4">
         <StatCard label="Total Enrollments" value={stats.reduce((s, c) => s + c.enrollments, 0)} />
         <StatCard label="Avg Completion" value={`${stats.length > 0 ? Math.round(stats.reduce((s, c) => s + c.completionRate, 0) / stats.length) : 0}%`} />
         <StatCard label="Total Revenue" value={`€${stats.reduce((s, c) => s + c.revenue, 0).toLocaleString()}`} />
+        <StatCard label="Video Views" value={totalViews} />
       </div>
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-secondary/30">
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Course</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Enrollments</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Completion</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Revenue</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stats.map((c) => (
-              <tr key={c.id} className="border-b border-border/50">
-                <td className="px-4 py-3 text-xs text-foreground font-medium">{c.title}</td>
-                <td className="px-4 py-3 text-xs text-muted-foreground">{c.enrollments}</td>
-                <td className="px-4 py-3 text-xs text-muted-foreground">{c.completionRate}%</td>
-                <td className="px-4 py-3 text-xs text-muted-foreground">€{c.revenue}</td>
+
+      <div>
+        <h4 className="font-serif text-sm font-semibold text-foreground mb-2">Courses</h4>
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-secondary/30">
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Course</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Enrollments</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Completion</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Revenue</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {stats.map((c) => (
+                <tr key={c.id} className="border-b border-border/50">
+                  <td className="px-4 py-2 text-xs text-foreground font-medium">{c.title}</td>
+                  <td className="px-4 py-2 text-xs text-muted-foreground">{c.enrollments}</td>
+                  <td className="px-4 py-2 text-xs text-muted-foreground">{c.completionRate}%</td>
+                  <td className="px-4 py-2 text-xs text-muted-foreground">€{c.revenue}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <LessonLeaderboard title="Most watched lessons" items={mostWatched} />
+        <LessonLeaderboard title="Least watched lessons" items={leastWatched} />
+      </div>
+    </div>
+  );
+}
+
+function LessonLeaderboard({ title, items }: { title: string; items: any[] }) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <h4 className="font-serif text-sm font-semibold text-foreground mb-3">{title}</h4>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">No data yet.</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((l) => (
+            <li key={l.id} className="flex items-center justify-between text-xs">
+              <div className="min-w-0">
+                <p className="text-foreground truncate">{l.title}</p>
+                <p className="text-muted-foreground text-[10px]">{l.course}</p>
+              </div>
+              <div className="text-right shrink-0 ml-3">
+                <p className="text-foreground font-medium">{l.views} views</p>
+                <p className="text-muted-foreground text-[10px]">{l.avgPct}% avg</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -453,7 +770,9 @@ export default function AdminCourses() {
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="font-serif text-3xl font-semibold text-foreground">Course Management</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Create and manage courses, modules, lessons, and learning paths.</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Create and manage courses, modules, lessons, and learning paths. Upload videos directly or paste an external URL.
+      </p>
 
       <Tabs defaultValue="courses" className="mt-8">
         <TabsList className="bg-secondary flex-wrap">
