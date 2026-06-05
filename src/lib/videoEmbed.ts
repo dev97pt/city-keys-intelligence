@@ -1,37 +1,118 @@
 export type VideoEmbed =
-  | { ok: true; platform: "youtube" | "vimeo" | "other"; embedUrl: string; videoId?: string }
+  | { ok: true; platform: "youtube" | "vimeo"; embedUrl: string; videoId: string }
   | { ok: false; message: string };
+
+const DANGEROUS_PROTOCOLS = /javascript:|data:|vbscript:|file:/i;
+const CONTROL_CHARS = /[\x00-\x1f\x7f]/;
+const HTML_EVENT = /<script|javascript:|on\w+=|data:/i;
+
+function isDangerous(url: string): boolean {
+  const lower = url.toLowerCase();
+  if (DANGEROUS_PROTOCOLS.test(lower)) return true;
+  if (HTML_EVENT.test(url)) return true;
+  if (CONTROL_CHARS.test(url)) return true;
+  return false;
+}
+
+function cleanYouTubeId(raw: string): string | null {
+  const id = raw.split(/[?&#]/)[0];
+  if (!/^[a-zA-Z0-9_-]{6,20}$/.test(id)) return null;
+  return id;
+}
+
+function cleanVimeoId(raw: string): string | null {
+  const id = raw.split(/[?&#]/)[0];
+  if (!/^\d{3,12}$/.test(id)) return null;
+  return id;
+}
 
 export function parseVideoEmbed(rawUrl: string): VideoEmbed {
   const url = (rawUrl || "").trim();
   if (!url) return { ok: false, message: "Please enter a video URL." };
+  if (isDangerous(url)) return { ok: false, message: "Invalid or unsafe URL." };
 
   try {
+    const urlObj = new URL(url);
+    if (urlObj.protocol !== "https:") {
+      return { ok: false, message: "Only HTTPS URLs are allowed." };
+    }
+
     // YouTube
-    const yt = url.match(
-      /(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=|embed\/|v\/|shorts\/|live\/)?([a-zA-Z0-9_-]{6,})/
-    );
-    if (yt && yt[1] && /youtu/.test(url)) {
-      const id = yt[1].split(/[?&]/)[0];
-      return { ok: true, platform: "youtube", videoId: id, embedUrl: `https://www.youtube.com/embed/${id}` };
+    const ytHost = /^(www\.|m\.)?youtube\.com$/i;
+    const ytBe = /^youtu\.be$/i;
+    if (ytHost.test(urlObj.hostname)) {
+      const id = urlObj.searchParams.get("v");
+      if (id) {
+        const clean = cleanYouTubeId(id);
+        if (clean) {
+          return {
+            ok: true,
+            platform: "youtube",
+            videoId: clean,
+            embedUrl: `https://www.youtube.com/embed/${encodeURIComponent(clean)}`,
+          };
+        }
+      }
+      const pathMatch = urlObj.pathname.match(/^\/embed\/([a-zA-Z0-9_-]{6,20})$/);
+      if (pathMatch) {
+        const clean = cleanYouTubeId(pathMatch[1]);
+        if (clean) {
+          return {
+            ok: true,
+            platform: "youtube",
+            videoId: clean,
+            embedUrl: `https://www.youtube.com/embed/${encodeURIComponent(clean)}`,
+          };
+        }
+      }
+    }
+    if (ytBe.test(urlObj.hostname)) {
+      const pathId = urlObj.pathname.replace(/^\//, "").split(/[?&#]/)[0];
+      const clean = cleanYouTubeId(pathId);
+      if (clean) {
+        return {
+          ok: true,
+          platform: "youtube",
+          videoId: clean,
+          embedUrl: `https://www.youtube.com/embed/${encodeURIComponent(clean)}`,
+        };
+      }
     }
 
     // Vimeo
-    const vm = url.match(
-      /(?:https?:\/\/)?(?:www\.)?(?:vimeo\.com|player\.vimeo\.com\/video)\/(?:channels\/[\w]+\/|groups\/[\w]+\/videos\/|album\/\d+\/video\/|video\/)?(\d+)/
-    );
-    if (vm && vm[1]) {
-      return { ok: true, platform: "vimeo", videoId: vm[1], embedUrl: `https://player.vimeo.com/video/${vm[1]}` };
+    const vimeoHost = /^(www\.)?vimeo\.com$/i;
+    const vimeoPlayer = /^player\.vimeo\.com$/i;
+    if (vimeoHost.test(urlObj.hostname)) {
+      const match = urlObj.pathname.match(/^\/(\d+)$/);
+      if (match) {
+        const clean = cleanVimeoId(match[1]);
+        if (clean) {
+          return {
+            ok: true,
+            platform: "vimeo",
+            videoId: clean,
+            embedUrl: `https://player.vimeo.com/video/${encodeURIComponent(clean)}`,
+          };
+        }
+      }
     }
-
-    // Already an embed URL from another provider — allow https iframe
-    if (/^https:\/\//i.test(url) && /(embed|player)/i.test(url)) {
-      return { ok: true, platform: "other", embedUrl: url };
+    if (vimeoPlayer.test(urlObj.hostname)) {
+      const match = urlObj.pathname.match(/^\/video\/(\d+)$/);
+      if (match) {
+        const clean = cleanVimeoId(match[1]);
+        if (clean) {
+          return {
+            ok: true,
+            platform: "vimeo",
+            videoId: clean,
+            embedUrl: `https://player.vimeo.com/video/${encodeURIComponent(clean)}`,
+          };
+        }
+      }
     }
 
     return { ok: false, message: "Unsupported URL. Paste a YouTube or Vimeo link." };
-  } catch (e) {
-    console.error("[videoEmbed] parse error", e);
+  } catch {
     return { ok: false, message: "Could not parse the URL." };
   }
 }
