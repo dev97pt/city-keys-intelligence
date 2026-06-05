@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, Film, Link2, Trash2, Loader2, CheckCircle2 } from "lucide-react";
+import { Upload, X, Film, Link2, Trash2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { parseVideoEmbed } from "@/lib/videoEmbed";
 
 export const ACCEPTED_VIDEO = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm", "video/x-m4v"];
 export const ACCEPTED_EXT = [".mp4", ".mov", ".avi", ".webm", ".m4v"];
