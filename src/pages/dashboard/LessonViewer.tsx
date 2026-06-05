@@ -289,11 +289,12 @@ export default function LessonViewer() {
       ) : lesson.video_url ? (
         (() => {
           const parsed = parseVideoEmbed(lesson.video_url);
-          if (!parsed.ok) {
-            console.error("[LessonViewer] invalid video_url", lesson.video_url, parsed.message);
+          if (parsed.ok === false) {
+            const msg = parsed.message;
+            console.error("[LessonViewer] invalid video_url", lesson.video_url, msg);
             return (
               <div className="mb-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-xs text-destructive">
-                Unable to embed this video: {parsed.message}
+                Unable to embed this video: {msg}
               </div>
             );
           }
