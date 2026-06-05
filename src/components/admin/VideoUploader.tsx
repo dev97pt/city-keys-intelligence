@@ -244,8 +244,10 @@ export default function VideoUploader({ value, onChange, lessonHint }: Props) {
                     src={parsed.embedUrl}
                     title="Video preview"
                     className="absolute inset-0 h-full w-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
+                    allow="fullscreen; encrypted-media; picture-in-picture"
+                    sandbox="allow-scripts allow-presentation allowfullscreen"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    loading="lazy"
                     onError={(e) => console.error("[VideoUploader] iframe error", e)}
                   />
                 </div>
