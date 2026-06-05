@@ -225,11 +225,12 @@ export default function VideoUploader({ value, onChange, lessonHint }: Props) {
               );
             }
             const parsed = parseVideoEmbed(raw);
-            if (!parsed.ok) {
+            if (parsed.ok === false) {
+              const msg = parsed.message;
               return (
                 <div className="flex items-start gap-1.5 text-[10px] text-destructive">
                   <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
-                  <span>{parsed.message}</span>
+                  <span>{msg}</span>
                 </div>
               );
             }
