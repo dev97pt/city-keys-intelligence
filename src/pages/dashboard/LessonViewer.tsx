@@ -9,6 +9,7 @@ import {
   ArrowLeft, Bookmark, BookmarkCheck, Check,
   ChevronLeft, ChevronRight, Clock, Lock, Download, FileText,
 } from "lucide-react";
+import { parseVideoEmbed } from "@/lib/videoEmbed";
 
 export default function LessonViewer() {
   const { courseId, lessonId } = useParams();
@@ -286,14 +287,30 @@ export default function LessonViewer() {
           />
         </div>
       ) : lesson.video_url ? (
-        <div className="aspect-video w-full rounded-xl overflow-hidden border border-border bg-black mb-6">
-          <iframe
-            src={lesson.video_url}
-            className="h-full w-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
+        (() => {
+          const parsed = parseVideoEmbed(lesson.video_url);
+          if (parsed.ok === false) {
+            const msg = parsed.message;
+            console.error("[LessonViewer] invalid video_url", lesson.video_url, msg);
+            return (
+              <div className="mb-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-xs text-destructive">
+                Unable to embed this video: {msg}
+              </div>
+            );
+          }
+          return (
+            <div className="relative w-full overflow-hidden rounded-xl border border-border bg-black mb-6" style={{ paddingTop: "56.25%" }}>
+              <iframe
+                src={parsed.embedUrl}
+                title={lesson.title || "Lesson video"}
+                className="absolute inset-0 h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                onError={(e) => console.error("[LessonViewer] iframe error", e)}
+              />
+            </div>
+          );
+        })()
       ) : null}
 
       {/* Watch progress bar */}
