@@ -9,6 +9,7 @@ import {
   ArrowLeft, Bookmark, BookmarkCheck, Check,
   ChevronLeft, ChevronRight, Clock, Lock, Download, FileText,
 } from "lucide-react";
+import { parseVideoEmbed } from "@/lib/videoEmbed";
 
 export default function LessonViewer() {
   const { courseId, lessonId } = useParams();
