@@ -48,6 +48,7 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
         if (clean) {
           return {
             ok: true,
+            kind: "iframe",
             platform: "youtube",
             videoId: clean,
             embedUrl: `https://www.youtube.com/embed/${encodeURIComponent(clean)}`,
@@ -60,6 +61,7 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
         if (clean) {
           return {
             ok: true,
+            kind: "iframe",
             platform: "youtube",
             videoId: clean,
             embedUrl: `https://www.youtube.com/embed/${encodeURIComponent(clean)}`,
@@ -73,6 +75,7 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
       if (clean) {
         return {
           ok: true,
+          kind: "iframe",
           platform: "youtube",
           videoId: clean,
           embedUrl: `https://www.youtube.com/embed/${encodeURIComponent(clean)}`,
@@ -90,6 +93,7 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
         if (clean) {
           return {
             ok: true,
+            kind: "iframe",
             platform: "vimeo",
             videoId: clean,
             embedUrl: `https://player.vimeo.com/video/${encodeURIComponent(clean)}`,
@@ -104,6 +108,7 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
         if (clean) {
           return {
             ok: true,
+            kind: "iframe",
             platform: "vimeo",
             videoId: clean,
             embedUrl: `https://player.vimeo.com/video/${encodeURIComponent(clean)}`,
