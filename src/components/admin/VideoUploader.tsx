@@ -237,22 +237,12 @@ export default function VideoUploader({ value, onChange, lessonHint }: Props) {
             return (
               <div className="space-y-1.5">
                 <p className="text-[10px] text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" /> {parsed.platform === "youtube" ? "YouTube" : parsed.platform === "vimeo" ? "Vimeo" : "Embed"} preview
+                  <CheckCircle2 className="h-3 w-3" /> {parsed.platform === "youtube" ? "YouTube" : parsed.platform === "vimeo" ? "Vimeo" : "Video file"} preview
                 </p>
-                <div className="relative w-full overflow-hidden rounded-md border border-border bg-black" style={{ paddingTop: "56.25%" }}>
-                  <iframe
-                    src={parsed.embedUrl}
-                    title="Video preview"
-                    className="absolute inset-0 h-full w-full"
-                    allow="fullscreen; encrypted-media; picture-in-picture"
-                    sandbox="allow-scripts allow-presentation allowfullscreen"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    loading="lazy"
-                    onError={(e) => console.error("[VideoUploader] iframe error", e)}
-                  />
-                </div>
+                <VideoPlayer externalUrl={raw} title="Video preview" />
               </div>
             );
+
           })()}
         </div>
       ) : hasUpload ? (
