@@ -117,7 +117,18 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
       }
     }
 
-    return { ok: false, message: "Unsupported URL. Paste a YouTube or Vimeo link." };
+    // Direct video file (mp4/webm/ogg/mov) over https — played natively
+    if (/\.(mp4|webm|ogg|ogv|mov|m4v)$/i.test(urlObj.pathname)) {
+      return {
+        ok: true,
+        kind: "file",
+        platform: "file",
+        videoId: urlObj.pathname,
+        embedUrl: urlObj.toString(),
+      };
+    }
+
+    return { ok: false, message: "Unsupported URL. Paste a YouTube, Vimeo, or direct MP4 link." };
   } catch {
     return { ok: false, message: "Could not parse the URL." };
   }
