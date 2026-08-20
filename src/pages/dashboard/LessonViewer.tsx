@@ -272,48 +272,14 @@ export default function LessonViewer() {
       </Button>
 
       {/* Video Player */}
-      {signedVideoUrl ? (
-        <div className="w-full rounded-xl overflow-hidden border border-border bg-black mb-6">
-          <video
-            ref={videoRef}
-            src={signedVideoUrl}
-            controls
-            controlsList="nodownload"
-            playsInline
-            preload="metadata"
-            onTimeUpdate={onTimeUpdate}
-            onEnded={onEnded}
-            className="w-full h-auto max-h-[70vh] bg-black"
-          />
-        </div>
-      ) : lesson.video_url ? (
-        (() => {
-          const parsed = parseVideoEmbed(lesson.video_url);
-          if (parsed.ok === false) {
-            const msg = parsed.message;
-            console.error("[LessonViewer] invalid video_url", lesson.video_url, msg);
-            return (
-              <div className="mb-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-xs text-destructive">
-                Unable to embed this video: {msg}
-              </div>
-            );
-          }
-          return (
-            <div className="relative w-full overflow-hidden rounded-xl border border-border bg-black mb-6" style={{ paddingTop: "56.25%" }}>
-              <iframe
-                src={parsed.embedUrl}
-                title={lesson.title || "Lesson video"}
-                className="absolute inset-0 h-full w-full"
-                allow="fullscreen; encrypted-media; picture-in-picture"
-                sandbox="allow-scripts allow-presentation allowfullscreen"
-                referrerPolicy="strict-origin-when-cross-origin"
-                loading="lazy"
-                onError={(e) => console.error("[LessonViewer] iframe error", e)}
-              />
-            </div>
-          );
-        })()
-      ) : null}
+      <VideoPlayer
+        className="mb-6"
+        fileUrl={signedVideoUrl}
+        externalUrl={lesson.video_url}
+        title={lesson.title || "Lesson video"}
+        videoProps={{ ref: videoRef, onTimeUpdate, onEnded }}
+      />
+
 
       {/* Watch progress bar */}
       {signedVideoUrl && (
