@@ -1,5 +1,6 @@
 export type VideoEmbed =
-  | { ok: true; platform: "youtube" | "vimeo"; embedUrl: string; videoId: string }
+  | { ok: true; kind: "iframe"; platform: "youtube" | "vimeo"; embedUrl: string; videoId: string }
+  | { ok: true; kind: "file"; platform: "file"; embedUrl: string; videoId: string }
   | { ok: false; message: string };
 
 const DANGEROUS_PROTOCOLS = /javascript:|data:|vbscript:|file:/i;
