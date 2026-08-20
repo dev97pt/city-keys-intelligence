@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, X, Film, Link2, Trash2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { parseVideoEmbed } from "@/lib/videoEmbed";
+import VideoPlayer from "@/components/VideoPlayer";
 
 export const ACCEPTED_VIDEO = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm", "video/x-m4v"];
 export const ACCEPTED_EXT = [".mp4", ".mov", ".avi", ".webm", ".m4v"];
@@ -237,22 +238,12 @@ export default function VideoUploader({ value, onChange, lessonHint }: Props) {
             return (
               <div className="space-y-1.5">
                 <p className="text-[10px] text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" /> {parsed.platform === "youtube" ? "YouTube" : parsed.platform === "vimeo" ? "Vimeo" : "Embed"} preview
+                  <CheckCircle2 className="h-3 w-3" /> {parsed.platform === "youtube" ? "YouTube" : parsed.platform === "vimeo" ? "Vimeo" : "Video file"} preview
                 </p>
-                <div className="relative w-full overflow-hidden rounded-md border border-border bg-black" style={{ paddingTop: "56.25%" }}>
-                  <iframe
-                    src={parsed.embedUrl}
-                    title="Video preview"
-                    className="absolute inset-0 h-full w-full"
-                    allow="fullscreen; encrypted-media; picture-in-picture"
-                    sandbox="allow-scripts allow-presentation allowfullscreen"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    loading="lazy"
-                    onError={(e) => console.error("[VideoUploader] iframe error", e)}
-                  />
-                </div>
+                <VideoPlayer externalUrl={raw} title="Video preview" />
               </div>
             );
+
           })()}
         </div>
       ) : hasUpload ? (

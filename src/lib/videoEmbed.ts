@@ -1,5 +1,6 @@
 export type VideoEmbed =
-  | { ok: true; platform: "youtube" | "vimeo"; embedUrl: string; videoId: string }
+  | { ok: true; kind: "iframe"; platform: "youtube" | "vimeo"; embedUrl: string; videoId: string }
+  | { ok: true; kind: "file"; platform: "file"; embedUrl: string; videoId: string }
   | { ok: false; message: string };
 
 const DANGEROUS_PROTOCOLS = /javascript:|data:|vbscript:|file:/i;
@@ -47,6 +48,7 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
         if (clean) {
           return {
             ok: true,
+            kind: "iframe",
             platform: "youtube",
             videoId: clean,
             embedUrl: `https://www.youtube.com/embed/${encodeURIComponent(clean)}`,
@@ -59,6 +61,7 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
         if (clean) {
           return {
             ok: true,
+            kind: "iframe",
             platform: "youtube",
             videoId: clean,
             embedUrl: `https://www.youtube.com/embed/${encodeURIComponent(clean)}`,
@@ -72,6 +75,7 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
       if (clean) {
         return {
           ok: true,
+          kind: "iframe",
           platform: "youtube",
           videoId: clean,
           embedUrl: `https://www.youtube.com/embed/${encodeURIComponent(clean)}`,
@@ -89,6 +93,7 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
         if (clean) {
           return {
             ok: true,
+            kind: "iframe",
             platform: "vimeo",
             videoId: clean,
             embedUrl: `https://player.vimeo.com/video/${encodeURIComponent(clean)}`,
@@ -103,6 +108,7 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
         if (clean) {
           return {
             ok: true,
+            kind: "iframe",
             platform: "vimeo",
             videoId: clean,
             embedUrl: `https://player.vimeo.com/video/${encodeURIComponent(clean)}`,
@@ -111,7 +117,18 @@ export function parseVideoEmbed(rawUrl: string): VideoEmbed {
       }
     }
 
-    return { ok: false, message: "Unsupported URL. Paste a YouTube or Vimeo link." };
+    // Direct video file (mp4/webm/ogg/mov) over https — played natively
+    if (/\.(mp4|webm|ogg|ogv|mov|m4v)$/i.test(urlObj.pathname)) {
+      return {
+        ok: true,
+        kind: "file",
+        platform: "file",
+        videoId: urlObj.pathname,
+        embedUrl: urlObj.toString(),
+      };
+    }
+
+    return { ok: false, message: "Unsupported URL. Paste a YouTube, Vimeo, or direct MP4 link." };
   } catch {
     return { ok: false, message: "Could not parse the URL." };
   }
