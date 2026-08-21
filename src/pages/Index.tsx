@@ -17,6 +17,18 @@ const Index = () => {
     setLoaderDone(true);
   }, []);
 
+  // Scroll to a hash target once the intro loader is out of the way
+  useEffect(() => {
+    if (!loaderDone) return;
+    const id = window.location.hash.replace("#", "");
+    if (!id) return;
+    const t = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+    return () => clearTimeout(t);
+  }, [loaderDone]);
+
+
   return (
     <div className="min-h-screen bg-background">
       {!loaderDone && <IntroLoader onComplete={handleLoaderComplete} />}
