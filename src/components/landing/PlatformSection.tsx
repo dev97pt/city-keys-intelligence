@@ -14,7 +14,7 @@ const features = [
 
 export function PlatformSection() {
   return (
-    <section id="platform" className="px-6 py-24">
+    <section id="platform" className="scroll-mt-20 px-6 py-24">
       <div className="mx-auto max-w-6xl">
         <div className="text-center">
           <TextReveal

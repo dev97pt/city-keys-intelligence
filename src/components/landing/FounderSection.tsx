@@ -3,7 +3,7 @@ import founderImg from "@/assets/ismael-founder.png";
 
 export function FounderSection() {
   return (
-    <section id="about" className="px-6 py-24">
+    <section id="about" className="scroll-mt-20 px-6 py-24">
       <div className="mx-auto max-w-6xl">
         <FadeUp>
           <div className="grid gap-10 md:grid-cols-2 md:items-center">

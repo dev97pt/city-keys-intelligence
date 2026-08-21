@@ -51,7 +51,7 @@ const columns = [
 
 export function KTTCWaySection() { // updated
   return (
-    <section className="px-6 py-24">
+    <section id="kttc-way" className="scroll-mt-20 px-6 py-24">
       <div className="mx-auto max-w-6xl">
         <LineReveal className="mb-16 w-full" />
         <div className="grid gap-6 md:grid-cols-3">
