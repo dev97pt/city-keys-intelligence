@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Navbar } from "@/components/landing/Navbar";
 import { IntroLoader } from "@/components/landing/IntroLoader";
 import { HeroSection } from "@/components/landing/HeroSection";
@@ -16,6 +16,18 @@ const Index = () => {
   const handleLoaderComplete = useCallback(() => {
     setLoaderDone(true);
   }, []);
+
+  // Scroll to a hash target once the intro loader is out of the way
+  useEffect(() => {
+    if (!loaderDone) return;
+    const id = window.location.hash.replace("#", "");
+    if (!id) return;
+    const t = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 200);
+    return () => clearTimeout(t);
+  }, [loaderDone]);
+
 
   return (
     <div className="min-h-screen bg-background">

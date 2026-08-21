@@ -2,7 +2,7 @@ import { TextReveal, FadeUp } from "./ScrollReveal";
 
 export function ProblemSection() {
   return (
-    <section className="px-6 py-24">
+    <section id="challenge" className="scroll-mt-20 px-6 py-24">
       <div className="mx-auto max-w-4xl text-center">
         <TextReveal
           as="h2"

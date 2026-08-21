@@ -1,17 +1,33 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navLinks = [
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Experiences", href: "#experiences" },
-  { label: "Platform", href: "#platform" },
-  { label: "About", href: "#about" },
+  { label: "The Challenge", id: "challenge" },
+  { label: "The KTTC Way", id: "kttc-way" },
+  { label: "Platform", id: "platform" },
+  { label: "About", id: "about" },
 ];
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const goToSection = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    setOpen(false);
+    if (location.pathname !== "/") {
+      navigate(`/#${id}`);
+      return;
+    }
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.history.replaceState(null, "", `#${id}`);
+    }
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -25,7 +41,8 @@ export function Navbar() {
           {navLinks.map((l) => (
             <a
               key={l.label}
-              href={l.href}
+              href={`#${l.id}`}
+              onClick={(e) => goToSection(e, l.id)}
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {l.label}
@@ -50,7 +67,7 @@ export function Navbar() {
         </div>
 
         {/* Mobile toggle */}
-        <button className="md:hidden text-foreground" onClick={() => setOpen(!open)}>
+        <button className="md:hidden text-foreground" onClick={() => setOpen(!open)} aria-label="Toggle menu">
           {open ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
@@ -61,9 +78,9 @@ export function Navbar() {
           {navLinks.map((l) => (
             <a
               key={l.label}
-              href={l.href}
+              href={`#${l.id}`}
               className="block py-3 text-sm text-muted-foreground"
-              onClick={() => setOpen(false)}
+              onClick={(e) => goToSection(e, l.id)}
             >
               {l.label}
             </a>
