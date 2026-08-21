@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Navbar } from "@/components/landing/Navbar";
 import { IntroLoader } from "@/components/landing/IntroLoader";
 import { HeroSection } from "@/components/landing/HeroSection";
