@@ -4,6 +4,7 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
+import { DashboardBreadcrumbs } from "@/components/dashboard/DashboardBreadcrumbs";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 
 export default function DashboardLayout() {
@@ -43,6 +44,7 @@ export default function DashboardLayout() {
           <div className="flex-1 flex flex-col">
             <header className="h-14 flex items-center border-b border-border px-4">
               <SidebarTrigger className="text-muted-foreground" />
+              <DashboardBreadcrumbs />
             </header>
             <main className="flex-1 p-6">
               <Outlet />

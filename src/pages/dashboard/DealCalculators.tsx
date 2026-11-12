@@ -4,99 +4,153 @@ import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Calculator, Save } from "lucide-react";
+import { ChevronDown, Info, Save } from "lucide-react";
+import { computeDeal } from "@/lib/dealMath";
+
+const eur = (n: number) => "€" + Math.round(n).toLocaleString("en-US");
+const toNum = (s: string) => parseFloat(s.replace(/[^\d.]/g, "")) || 0;
+
+function MoneyInput({ label, value, onChange, placeholder, hint }: { label: string; value: string; onChange: (v: string) => void; placeholder: string; hint?: string }) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <div className="relative mt-1">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">€</span>
+        <Input
+          inputMode="numeric"
+          value={value ? Number(toNum(value)).toLocaleString("en-US") : ""}
+          onChange={(e) => onChange(e.target.value.replace(/[^\d]/g, ""))}
+          className="pl-7 font-mono tabular-nums"
+          placeholder={placeholder}
+        />
+      </div>
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function PctInput({ label, value, onChange, max = 100 }: { label: string; value: string; onChange: (v: string) => void; max?: number }) {
+  return (
+    <div>
+      <Label className="text-xs">{label}</Label>
+      <Input type="number" min={0} max={max} step="0.1" value={value} onChange={(e) => onChange(e.target.value)} className="mt-1 font-mono tabular-nums" />
+    </div>
+  );
+}
 
 export default function DealCalculators() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [purchasePrice, setPurchasePrice] = useState("");
-  const [renovationCost, setRenovationCost] = useState("");
-  const [monthlyRent, setMonthlyRent] = useState("");
+  const [price, setPrice] = useState("");
+  const [renovation, setRenovation] = useState("");
+  const [rent, setRent] = useState("");
+  const [costRate, setCostRate] = useState("4");
+  const [tax, setTax] = useState("7");
+  const [ltv, setLtv] = useState("0");
+  const [interest, setInterest] = useState("3.5");
+  const [years, setYears] = useState("30");
   const [saving, setSaving] = useState(false);
 
-  const pp = parseFloat(purchasePrice) || 0;
-  const rc = parseFloat(renovationCost) || 0;
-  const mr = parseFloat(monthlyRent) || 0;
-  const totalInvestment = pp + rc;
-  const annualRent = mr * 12;
-  const grossYield = totalInvestment > 0 ? (annualRent / totalInvestment) * 100 : 0;
-  const monthlyCashFlow = mr - (totalInvestment > 0 ? (totalInvestment * 0.04) / 12 : 0); // Assume 4% annual costs
-  const roi = totalInvestment > 0 ? ((annualRent - totalInvestment * 0.04) / totalInvestment) * 100 : 0;
+  const d = computeDeal({
+    price: toNum(price), renovation: toNum(renovation), monthlyRent: toNum(rent),
+    costRate: toNum(costRate), acquisitionTax: toNum(tax), ltv: Math.min(toNum(ltv), 100),
+    interest: toNum(interest), years: toNum(years),
+  });
+  const ready = toNum(price) > 0 && toNum(rent) > 0;
 
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
     const { error } = await supabase.from("deal_calculators").insert({
-      user_id: user.id,
-      purchase_price: pp,
-      renovation_cost: rc,
-      monthly_rent: mr,
-      yield: grossYield,
-      roi,
-      cash_flow: monthlyCashFlow,
+      user_id: user.id, purchase_price: toNum(price), renovation_cost: toNum(renovation), monthly_rent: toNum(rent),
+      yield: d.grossYield, roi: d.roi, cash_flow: d.monthlyCashFlow,
     });
     setSaving(false);
-    if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } else {
-      toast({ title: "Deal saved", description: "Your analysis has been saved." });
-    }
+    if (error) toast({ variant: "destructive", title: "Couldn't save", description: error.message });
+    else toast({ title: "Deal saved", description: "Your analysis has been saved." });
   };
 
+  const tone = (n: number) => (n > 0 ? "text-primary" : "text-destructive");
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="font-serif text-3xl font-semibold text-foreground">Deal Calculator</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Analyze property investment returns.</p>
+    <TooltipProvider>
+      <div className="mx-auto max-w-3xl">
+        <h1 className="font-serif text-3xl font-semibold text-foreground">Deal Calculator</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Estimate yield, cash flow and return on a property in Portugal.</p>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-2">
-        <div className="space-y-4">
-          <h2 className="font-serif text-lg font-semibold text-foreground">Input</h2>
-          <div>
-            <Label>Purchase Price (€)</Label>
-            <Input type="number" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} className="mt-1 font-mono" placeholder="250000" />
-          </div>
-          <div>
-            <Label>Renovation Cost (€)</Label>
-            <Input type="number" value={renovationCost} onChange={(e) => setRenovationCost(e.target.value)} className="mt-1 font-mono" placeholder="30000" />
-          </div>
-          <div>
-            <Label>Monthly Rent (€)</Label>
-            <Input type="number" value={monthlyRent} onChange={(e) => setMonthlyRent(e.target.value)} className="mt-1 font-mono" placeholder="1500" />
-          </div>
-        </div>
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <h2 className="font-serif text-lg font-semibold text-foreground">Property</h2>
+            <MoneyInput label="Purchase price" value={price} onChange={setPrice} placeholder="250,000" />
+            <MoneyInput label="Renovation cost" value={renovation} onChange={setRenovation} placeholder="30,000" hint="Leave empty if move-in ready." />
+            <MoneyInput label="Expected monthly rent" value={rent} onChange={setRent} placeholder="1,500" />
 
-        <div className="space-y-4">
-          <h2 className="font-serif text-lg font-semibold text-foreground">Results</h2>
-          <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Total Investment</span>
-              <span className="font-mono text-sm font-semibold text-foreground">€{totalInvestment.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Annual Rent</span>
-              <span className="font-mono text-sm text-foreground">€{annualRent.toLocaleString()}</span>
-            </div>
-            <div className="border-t border-border pt-4 flex justify-between">
-              <span className="text-sm text-muted-foreground">Gross Yield</span>
-              <span className="font-mono text-lg font-bold text-primary">{grossYield.toFixed(1)}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Net ROI (est.)</span>
-              <span className={`font-mono text-sm font-semibold ${roi > 0 ? "text-green-400" : "text-red-400"}`}>{roi.toFixed(1)}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Monthly Cash Flow</span>
-              <span className={`font-mono text-sm font-semibold ${monthlyCashFlow > 0 ? "text-green-400" : "text-red-400"}`}>€{monthlyCashFlow.toFixed(0)}</span>
-            </div>
+            <Collapsible className="rounded-lg border border-border">
+              <CollapsibleTrigger className="group flex w-full items-center justify-between px-4 py-3 text-sm text-foreground">
+                Advanced assumptions
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="grid grid-cols-2 gap-3 px-4 pb-4">
+                <PctInput label="Purchase taxes (IMT + stamp) %" value={tax} onChange={setTax} />
+                <PctInput label="Annual running costs %" value={costRate} onChange={setCostRate} />
+                <PctInput label="Mortgage (loan-to-value) %" value={ltv} onChange={setLtv} />
+                <PctInput label="Interest rate %" value={interest} onChange={setInterest} max={20} />
+                <PctInput label="Loan term (years)" value={years} onChange={setYears} max={40} />
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
-          <Button onClick={handleSave} disabled={saving || totalInvestment === 0} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving…" : "Save Analysis"}
-          </Button>
+          <div className="space-y-4">
+            <h2 className="font-serif text-lg font-semibold text-foreground">Results</h2>
+            {!ready ? (
+              <div className="rounded-lg border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
+                Enter a purchase price and monthly rent to see your returns.
+              </div>
+            ) : (
+              <div className="space-y-3 rounded-lg border border-border bg-card p-6 font-mono text-sm tabular-nums">
+                <Row label="Purchase taxes" value={eur(d.taxes)} />
+                <Row label="Total investment" value={eur(d.totalInvestment)} strong />
+                {d.loan > 0 && <Row label="Mortgage payment / mo" value={eur(d.mortgage)} />}
+                <Row label="Your cash invested" value={eur(d.cashInvested)} />
+                <Row label="Annual rent" value={eur(d.annualRent)} />
+                <div className="flex justify-between border-t border-border pt-3">
+                  <span className="font-sans text-muted-foreground">Gross yield</span>
+                  <span className="text-lg font-bold text-primary">{d.grossYield.toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="flex items-center gap-1 font-sans text-muted-foreground">
+                    Net return on cash
+                    <Tooltip>
+                      <TooltipTrigger aria-label="How this is calculated"><Info className="h-3.5 w-3.5" /></TooltipTrigger>
+                      <TooltipContent className="max-w-xs font-sans">
+                        Yearly rent minus running costs ({costRate}% of investment per year: property tax, condo fees, maintenance) and mortgage payments, divided by the cash you put in.
+                      </TooltipContent>
+                    </Tooltip>
+                  </span>
+                  <span className={`font-semibold ${tone(d.roi)}`}>{d.roi.toFixed(1)}%</span>
+                </div>
+                <Row label="Monthly cash flow" value={eur(d.monthlyCashFlow)} className={tone(d.monthlyCashFlow)} />
+              </div>
+            )}
+            <Button onClick={handleSave} disabled={saving || !ready} className="w-full">
+              <Save className="mr-2 h-4 w-4" />
+              {saving ? "Saving…" : "Save analysis"}
+            </Button>
+          </div>
         </div>
       </div>
+    </TooltipProvider>
+  );
+}
+
+function Row({ label, value, strong, className = "" }: { label: string; value: string; strong?: boolean; className?: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="font-sans text-muted-foreground">{label}</span>
+      <span className={`${strong ? "font-semibold text-foreground" : "text-foreground"} ${className}`}>{value}</span>
     </div>
   );
 }
