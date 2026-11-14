@@ -79,7 +79,13 @@ export default function NeighborhoodQuiz({ onComplete }: Props) {
   const isLast = step === questions.length - 1;
 
   const select = (value: string) => {
-    setAnswers((prev) => ({ ...prev, [q.key]: value }));
+    const updated = { ...answers, [q.key]: value };
+    setAnswers(updated);
+    // Single-choice questions advance automatically
+    setTimeout(() => {
+      if (isLast) onComplete(updated as QuizAnswers);
+      else setStep((s) => s + 1);
+    }, 300);
   };
 
   const next = () => {
